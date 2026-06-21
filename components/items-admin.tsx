@@ -43,16 +43,18 @@ const ITEMS_PER_PAGE = 10;
 
 interface DbItem {
   id: string;
-  code: string; // <-- Novo campo
+  code: string;
   name: string;
   unit: string;
   cost: number | null;
-  sectors: { id: string; name: string }[];
+  sectors: { id: string; code: string; name: string }[]; // <-- Adicionado code aqui
 }
 
 export function ItemsAdmin() {
   const [items, setItems] = useState<DbItem[]>([]);
-  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([]);
+  const [sectors, setSectors] = useState<
+    { id: string; code: string; name: string }[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   const [open, setOpen] = useState(false);
@@ -98,9 +100,8 @@ export function ItemsAdmin() {
   );
 
   function downloadTemplate() {
-    // Atualizado para incluir a coluna de código e tornar as outras opcionais
     const csvContent =
-      "Codigo,Descricao,Unidade,Setor,Custo\n789101010,Farinha de Trigo,KG,Cozinha,5.50\n123456789,Ovo,CX,Padaria,\n987654321,Leite,L,Confeitaria,4.20";
+      "Codigo,Descricao,Unidade,Cod Setor,Nome do Setor,Custo\n789101010,Farinha de Trigo,KG,101,Cozinha,5.50\n123456789,Ovo,CX,102,Padaria,\n987654321,Amendoim,KG,101/102,Cozinha / Padaria,4.20";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -109,7 +110,6 @@ export function ItemsAdmin() {
     link.click();
     document.body.removeChild(link);
   }
-
   function openNew() {
     setEditId(null);
     setCode("");
@@ -176,21 +176,20 @@ export function ItemsAdmin() {
     let errorCount = 0;
 
     for (const item of parsedData) {
-      // 1. Procurar os IDs reais baseando-se nos nomes digitados no CSV
-      const matchedSectorIds = item.sectorNames
-        .map((name) => {
+      // Agora comparamos os CÓDIGOS que vieram na planilha com os CÓDIGOS reais dos setores
+      const matchedSectorIds = item.sectorCodes
+        .map((code) => {
           const found = sectors.find(
-            (s) => s.name.toLowerCase() === name.toLowerCase(),
+            (s) => s.code.toLowerCase() === code.toLowerCase(),
           );
           return found?.id;
         })
         .filter(Boolean) as string[];
 
-      // 2. Tenta criar o item no banco de dados
       const res = await createItem({
         code: item.code,
         name: item.name,
-        unit: item.unit.toUpperCase(), // Garantindo que fique em maiúsculo (ex: UN)
+        unit: item.unit.toUpperCase(),
         cost: item.cost,
         sectorIds: matchedSectorIds,
       });
@@ -200,9 +199,9 @@ export function ItemsAdmin() {
     }
 
     alert(
-      `Importação finalizada!\n✅ Sucesso: ${successCount}\n❌ Erros (ex: códigos duplicados): ${errorCount}`,
+      `Importação finalizada!\n✅ Sucesso: ${successCount}\n❌ Erros (códigos duplicados): ${errorCount}`,
     );
-    loadData(); // Recarrega a tabela de itens
+    loadData();
   }
 
   return (

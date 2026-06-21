@@ -16,12 +16,12 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-// ATUALIZADO: Adicionamos 'code' e mudamos sectorName para array
+// Interface atualizada usando os códigos dos setores
 export interface ParsedCSVItem {
   code: string;
   name: string;
   unit: string;
-  sectorNames: string[];
+  sectorCodes: string[];
   cost?: number;
 }
 
@@ -58,19 +58,31 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
         .split(separator)
         .map((h) => h.trim());
 
-      // MAPEAMENTO DE COLUNAS (Agora com Código)
+      // MAPEAMENTO DE COLUNAS (Agora à prova de acentuação e Excel)
       const codeIdx = headers.findIndex(
-        (h) => h === "código" || h === "codigo" || h === "referência",
+        (h) =>
+          h === "código" ||
+          h === "codigo" ||
+          h === "referência" ||
+          h === "referencia",
       );
       const nameIdx = headers.findIndex(
-        (h) => h === "nome" || h === "insumo" || h === "descrição",
+        (h) =>
+          h === "nome" ||
+          h === "insumo" ||
+          h === "descrição" ||
+          h === "descricao",
       );
-      const unitIdx = headers.findIndex((h) => h === "unidade");
+      const unitIdx = headers.findIndex((h) => h === "unidade" || h === "und");
       const sectorIdx = headers.findIndex(
-        (h) => h === "setor" || h === "setores",
+        (h) =>
+          h === "cod setor" ||
+          h === "cód setor" ||
+          h === "setores" ||
+          h === "setor",
       );
       const costIdx = headers.findIndex(
-        (h) => h === "custo" || h === "preço" || h === "preco",
+        (h) => h === "custo" || h === "preço" || h === "preco" || h === "valor",
       );
 
       // Validação de colunas obrigatórias
@@ -90,10 +102,10 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
         const code = columns[codeIdx];
         const name = columns[nameIdx];
         const unit = columns[unitIdx];
-        const rawSectorName = sectorIdx !== -1 ? columns[sectorIdx] : "";
+        const rawSectorCode = sectorIdx !== -1 ? columns[sectorIdx] : "";
 
-        // SEPARA OS SETORES POR VÍRGULA, BARRA OU PIPE
-        const sectorNames = rawSectorName
+        // SEPARA OS CÓDIGOS DOS SETORES POR VÍRGULA, BARRA OU PIPE
+        const sectorCodes = rawSectorCode
           .split(/[/|,]+/) // Divide usando / ou | ou ,
           .map((s) => s.trim())
           .filter(Boolean); // Remove espaços vazios
@@ -104,8 +116,9 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
           if (!isNaN(parsedCost)) cost = parsedCost;
         }
 
+        // Valida se as colunas essenciais existem na linha
         if (code && name && unit) {
-          parsedData.push({ code, name, unit, sectorNames, cost });
+          parsedData.push({ code, name, unit, sectorCodes, cost });
         }
       }
 
@@ -115,7 +128,7 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
       }
 
       onImport(parsedData);
-      setOpen(false);
+      setOpen(false); // Fecha modal no final
     } catch (err) {
       setError(
         "Ocorreu um erro ao processar o arquivo. Verifique se o formato está legível.",
@@ -157,10 +170,15 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
             <strong className="text-foreground">Código, Nome, Unidade</strong>{" "}
             (Obrigatórios).
             <br />E as colunas opcionais:{" "}
-            <strong className="text-foreground">Setor, Custo</strong>.<br />
-            <em>
-              Dica: Para vincular a mais de um setor, use uma barra (Cozinha /
-              Padaria).
+            <strong className="text-foreground">
+              Cod Setor, Nome do Setor, Custo
+            </strong>
+            .<br />
+            <em className="block mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+              Dica: O sistema utiliza o <strong>Cod Setor</strong> para fazer o
+              vínculo real. A coluna <strong>Nome do Setor</strong> serve apenas
+              para sua organização visual na planilha. Se for mais de um setor,
+              separe por barra (ex: Cod: 101 / 102 | Nome: Coz / Pad).
             </em>
           </p>
 

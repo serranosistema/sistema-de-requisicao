@@ -16,7 +16,7 @@ export async function getItems() {
       where: { storeId, isActive: true },
       include: {
         sectors: {
-          select: { id: true, name: true },
+          select: { id: true, code: true, name: true },
         },
       },
       orderBy: { name: "asc" },

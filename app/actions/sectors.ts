@@ -3,14 +3,9 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-// Função auxiliar para obter a única loja existente de momento
 async function getDefaultStoreId() {
   const store = await prisma.store.findFirst();
-  if (!store) {
-    throw new Error(
-      "Nenhuma loja encontrada na base de dados. Crie uma loja primeiro.",
-    );
-  }
+  if (!store) throw new Error("Nenhuma loja encontrada na base de dados.");
   return store.id;
 }
 
@@ -27,25 +22,33 @@ export async function getSectors() {
   }
 }
 
-export async function createSector(name: string) {
+// Atualizado para receber 'code'
+export async function createSector(data: { code: string; name: string }) {
   try {
     const storeId = await getDefaultStoreId();
     const sector = await prisma.sector.create({
-      data: { name, storeId },
+      data: { code: data.code, name: data.name, storeId },
     });
     revalidatePath("/admin");
     return { success: true, sector };
   } catch (error) {
     console.error("Erro ao criar setor:", error);
-    return { success: false, error: "Não foi possível criar o setor." };
+    return {
+      success: false,
+      error: "Não foi possível criar. Verifique se o código já existe.",
+    };
   }
 }
 
-export async function updateSector(id: string, name: string) {
+// Atualizado para receber 'code'
+export async function updateSector(
+  id: string,
+  data: { code: string; name: string },
+) {
   try {
     const sector = await prisma.sector.update({
       where: { id },
-      data: { name },
+      data: { code: data.code, name: data.name },
     });
     revalidatePath("/admin");
     return { success: true, sector };

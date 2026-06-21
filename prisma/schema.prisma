@@ -46,13 +46,11 @@ model User {
 
 model Sector {
   id        String   @id @default(cuid())
+  code      String   @unique // <-- NOVO CAMPO
   name      String
 
-  // Relação com a loja
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id])
-
-  // Relação N:N com itens
   items     Item[]   
 
   createdAt DateTime @default(now())
