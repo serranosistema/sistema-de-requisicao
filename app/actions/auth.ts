@@ -42,3 +42,25 @@ export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete("session_token");
 }
+
+// Adicione isso no final do arquivo app/actions/auth.ts
+
+export async function getUsuarioAtual() {
+  try {
+    // Como combinamos, por enquanto estamos pegando o usuário padrão do banco.
+    // No futuro, aqui você leria o cookie e buscaria o usuário pelo ID dele.
+    const user = await prisma.user.findFirst();
+
+    if (!user) return null;
+
+    // Retornamos apenas o que o front-end precisa (nunca retorne a senha!)
+    return {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+  } catch (error) {
+    console.error("Erro ao buscar usuário:", error);
+    return null;
+  }
+}

@@ -112,7 +112,7 @@ function KpiCard({
   large?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-4 rounded-2xl border border-border bg-black p-5">
+    <div className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5">
       <div
         className={cn(
           "flex shrink-0 items-center justify-center rounded-xl",
