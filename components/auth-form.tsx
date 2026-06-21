@@ -1,3 +1,4 @@
+// ARQUIVO: components/auth-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { loginComSenha } from "@/app/actions/auth"; // <-- Importamos a Server Action
+import { loginComSenha } from "@/app/actions/auth";
 
 export function AuthForm() {
   const router = useRouter();
@@ -20,14 +21,11 @@ export function AuthForm() {
     setLoading(true);
     setError("");
 
-    // Chamamos a função do servidor passando a senha
     const resultado = await loginComSenha(password);
 
     if (resultado.sucesso) {
-      // Se a senha bateu com o banco, vai pro dashboard
       router.push("/dashboard");
     } else {
-      // Se não, mostra o erro que veio do banco
       setError(resultado.erro || "Erro ao fazer login");
       setLoading(false);
     }

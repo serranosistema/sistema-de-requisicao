@@ -30,9 +30,7 @@ export function Sidebar({
   const { user } = useStore();
 
   return (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      {/* Logo */}
-
+    <div className="flex h-full flex-col bg-black text-sidebar-foreground">
       {/* Nav */}
       <nav className="flex-1 space-y-1.5 p-3">
         {navItems.map((item) => {
