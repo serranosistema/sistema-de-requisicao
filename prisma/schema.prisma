@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Sua string de conexão do Neon
+}
+
+// Tabela de Filiais/Lojas preparada para o futuro
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  cnpj      String?  @unique // Opcional por enquanto, útil para o futuro
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Os mesmos papéis que você já definiu no lib/types.ts
+enum Role {
+  ADMIN
+  REPOSITOR
+  ESTOQUISTA
+}
+
+// Tabela de Usuários completa, mas acessada de forma simplificada hoje
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String   // Aqui ficará a hash da senha (ex: "1234" em hash)
+  role      Role     @default(ADMIN)
+  
+  // Relacionamento com a loja
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
