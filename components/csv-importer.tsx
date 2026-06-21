@@ -16,11 +16,12 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-// A interface que nosso arquivo store.tsx vai usar para receber os dados limpos
+// ATUALIZADO: Adicionamos 'code' e mudamos sectorName para array
 export interface ParsedCSVItem {
+  code: string;
   name: string;
   unit: string;
-  sectorName: string;
+  sectorNames: string[];
   cost?: number;
 }
 
@@ -44,7 +45,6 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
 
     try {
       const text = await file.text();
-      // Divide por quebra de linha (suporta Windows \r\n e Unix \n)
       const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
 
       if (lines.length < 2) {
@@ -52,24 +52,31 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
         return;
       }
 
-      // Detecta automaticamente se é separado por vírgula ou ponto-e-vírgula
       const separator = lines[0].includes(";") ? ";" : ",";
       const headers = lines[0]
         .toLowerCase()
         .split(separator)
         .map((h) => h.trim());
 
-      // Mapeia os índices das colunas para ser resiliente (não importa a ordem)
-      const nameIdx = headers.findIndex((h) => h === "nome" || h === "insumo");
+      // MAPEAMENTO DE COLUNAS (Agora com Código)
+      const codeIdx = headers.findIndex(
+        (h) => h === "código" || h === "codigo" || h === "referência",
+      );
+      const nameIdx = headers.findIndex(
+        (h) => h === "nome" || h === "insumo" || h === "descrição",
+      );
       const unitIdx = headers.findIndex((h) => h === "unidade");
-      const sectorIdx = headers.findIndex((h) => h === "setor");
+      const sectorIdx = headers.findIndex(
+        (h) => h === "setor" || h === "setores",
+      );
       const costIdx = headers.findIndex(
         (h) => h === "custo" || h === "preço" || h === "preco",
       );
 
-      if (nameIdx === -1 || unitIdx === -1 || sectorIdx === -1) {
+      // Validação de colunas obrigatórias
+      if (codeIdx === -1 || nameIdx === -1 || unitIdx === -1) {
         setError(
-          "O CSV precisa ter obrigatoriamente as colunas: Nome, Unidade e Setor.",
+          "O CSV precisa ter obrigatoriamente as colunas: Código, Nome e Unidade.",
         );
         return;
       }
@@ -78,24 +85,27 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
 
       for (let i = 1; i < lines.length; i++) {
         const columns = lines[i].split(separator).map((col) => col.trim());
-        // Ignora linhas incompletas no meio do arquivo
         if (columns.length < 3) continue;
 
+        const code = columns[codeIdx];
         const name = columns[nameIdx];
         const unit = columns[unitIdx];
-        const sectorName = columns[sectorIdx];
+        const rawSectorName = sectorIdx !== -1 ? columns[sectorIdx] : "";
+
+        // SEPARA OS SETORES POR VÍRGULA, BARRA OU PIPE
+        const sectorNames = rawSectorName
+          .split(/[/|,]+/) // Divide usando / ou | ou ,
+          .map((s) => s.trim())
+          .filter(Boolean); // Remove espaços vazios
 
         let cost: number | undefined = undefined;
         if (costIdx !== -1 && columns[costIdx]) {
-          // Trata valores com vírgula (R$ 10,50) para float do JS (10.50)
           const parsedCost = parseFloat(columns[costIdx].replace(",", "."));
-          if (!isNaN(parsedCost)) {
-            cost = parsedCost;
-          }
+          if (!isNaN(parsedCost)) cost = parsedCost;
         }
 
-        if (name && unit && sectorName) {
-          parsedData.push({ name, unit, sectorName, cost });
+        if (code && name && unit) {
+          parsedData.push({ code, name, unit, sectorNames, cost });
         }
       }
 
@@ -105,7 +115,7 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
       }
 
       onImport(parsedData);
-      setOpen(false); // Fecha o modal após importar
+      setOpen(false);
     } catch (err) {
       setError(
         "Ocorreu um erro ao processar o arquivo. Verifique se o formato está legível.",
@@ -113,19 +123,16 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
     }
   };
 
-  // Lógica de Drag & Drop
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
   };
-
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   };
-
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -141,15 +148,20 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Importar Insumos e Setores</DialogTitle>
+          <DialogTitle>Importar Insumos</DialogTitle>
         </DialogHeader>
 
         <div className="mt-2 flex flex-col gap-4">
           <p className="text-sm text-muted-foreground text-pretty">
-            O arquivo CSV deve conter as colunas:{" "}
-            <strong className="text-foreground">Nome, Unidade, Setor</strong> e
-            opcionalmente <strong className="text-foreground">Custo</strong>.
-            Pode ser separado por vírgula ou ponto-e-vírgula.
+            O arquivo CSV deve conter:{" "}
+            <strong className="text-foreground">Código, Nome, Unidade</strong>{" "}
+            (Obrigatórios).
+            <br />E as colunas opcionais:{" "}
+            <strong className="text-foreground">Setor, Custo</strong>.<br />
+            <em>
+              Dica: Para vincular a mais de um setor, use uma barra (Cozinha /
+              Padaria).
+            </em>
           </p>
 
           <div
@@ -181,10 +193,9 @@ export function CsvImporter({ onImport }: CsvImporterProps) {
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) handleFile(file);
-                if (fileInputRef.current) fileInputRef.current.value = ""; // Reseta o input
+                if (fileInputRef.current) fileInputRef.current.value = "";
               }}
             />
-
             <Button
               variant="secondary"
               onClick={() => fileInputRef.current?.click()}
