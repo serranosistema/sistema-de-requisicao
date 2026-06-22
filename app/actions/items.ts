@@ -105,3 +105,28 @@ export async function deleteItem(id: string) {
     return { success: false, error: "Não foi possível eliminar o item." };
   }
 }
+
+export async function deleteAllItems() {
+  try {
+    const storeId = await getDefaultStoreId();
+
+    await prisma.item.updateMany({
+      where: {
+        storeId,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao excluir todos os itens:", error);
+    return {
+      success: false,
+      error: "Não foi possível excluir todos os itens.",
+    };
+  }
+}

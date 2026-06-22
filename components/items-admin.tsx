@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+
 import {
   Dialog,
   DialogContent,
@@ -35,10 +36,11 @@ import {
   createItem,
   updateItem,
   deleteItem,
+  deleteAllItems,
 } from "@/app/actions/items";
 import { getSectors } from "@/app/actions/sectors";
 
-const UNITS = ["UN", "KG", "CX", "L"]; // Coloquei 'UN' primeiro como padrão
+const UNITS = ["UN", "KG", "CX", "L"];
 const ITEMS_PER_PAGE = 10;
 
 interface DbItem {
@@ -47,8 +49,17 @@ interface DbItem {
   name: string;
   unit: string;
   cost: number | null;
-  sectors: { id: string; code: string; name: string }[]; // <-- Adicionado code aqui
+  sectors: { id: string; code: string; name: string }[];
 }
+
+// Tipo para controlar o nosso modal de avisos global
+type FeedbackDialogState = {
+  open: boolean;
+  type: "alert" | "confirm";
+  title: string;
+  message: string;
+  onConfirm?: () => void;
+};
 
 export function ItemsAdmin() {
   const [items, setItems] = useState<DbItem[]>([]);
@@ -57,15 +68,37 @@ export function ItemsAdmin() {
   >([]);
   const [loading, setLoading] = useState(true);
 
+  // Estados do Modal de Cadastro
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [code, setCode] = useState(""); // <-- Estado do Código
+  const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("UN");
   const [cost, setCost] = useState<string>("");
   const [sectorIds, setSectorIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Estado do Modal de Avisos (Substitui alert e confirm nativos)
+  const [feedback, setFeedback] = useState<FeedbackDialogState>({
+    open: false,
+    type: "alert",
+    title: "",
+    message: "",
+  });
+
+  // Funções ajudantes para abrir o modal de feedback
+  function showAlert(title: string, message: string) {
+    setFeedback({ open: true, type: "alert", title, message });
+  }
+
+  function showConfirm(title: string, message: string, onConfirm: () => void) {
+    setFeedback({ open: true, type: "confirm", title, message, onConfirm });
+  }
+
+  function closeFeedback() {
+    setFeedback((prev) => ({ ...prev, open: false }));
+  }
 
   async function loadData() {
     setLoading(true);
@@ -85,7 +118,6 @@ export function ItemsAdmin() {
   const filteredItems = useMemo(() => {
     if (!search.trim()) return items;
     const lowerSearch = search.toLowerCase();
-    // Agora a busca funciona tanto pelo código quanto pela descrição
     return items.filter(
       (it) =>
         it.name.toLowerCase().includes(lowerSearch) ||
@@ -110,6 +142,7 @@ export function ItemsAdmin() {
     link.click();
     document.body.removeChild(link);
   }
+
   function openNew() {
     setEditId(null);
     setCode("");
@@ -137,16 +170,18 @@ export function ItemsAdmin() {
   }
 
   async function save() {
-    // O código é obrigatório!
     if (!code.trim()) {
-      alert("O campo Código é obrigatório!");
+      showAlert(
+        "Campo Obrigatório",
+        "O campo Código é obrigatório para cadastrar o item.",
+      );
       return;
     }
 
     const parsedCost = cost ? parseFloat(cost.replace(",", ".")) : undefined;
     const data = {
       code: code.trim(),
-      name: name.trim() || "Sem descrição", // Se não preencher, salva um fallback
+      name: name.trim() || "Sem descrição",
       unit,
       sectorIds,
       cost: parsedCost && !isNaN(parsedCost) ? parsedCost : undefined,
@@ -154,33 +189,83 @@ export function ItemsAdmin() {
 
     if (editId) {
       const res = await updateItem(editId, data);
-      if (res.success) loadData();
-      else alert(res.error); // Mostra erro caso o código já exista, por exemplo
+      if (res.success) {
+        loadData();
+        setOpen(false);
+      } else {
+        showAlert(
+          "Erro ao Atualizar",
+          res.error || "Ocorreu um erro desconhecido.",
+        );
+      }
     } else {
       const res = await createItem(data);
-      if (res.success) loadData();
-      else alert(res.error);
+      if (res.success) {
+        loadData();
+        setOpen(false);
+      } else {
+        showAlert(
+          "Erro ao Criar",
+          res.error || "Verifique se o código já está em uso.",
+        );
+      }
     }
-    setOpen(false);
   }
 
-  async function handleDelete(id: string) {
-    if (confirm("Tem a certeza de que deseja eliminar este item?")) {
-      const res = await deleteItem(id);
-      if (res.success) loadData();
-    }
+  function handleDelete(id: string) {
+    showConfirm(
+      "Excluir Item",
+      "Tem a certeza de que deseja eliminar este item? Esta ação removerá o item da lista.",
+      async () => {
+        const res = await deleteItem(id);
+        if (res.success) {
+          loadData();
+        } else {
+          showAlert("Erro", "Não foi possível excluir o item selecionado.");
+        }
+      },
+    );
   }
+
+  function handleDeleteAll() {
+    if (items.length === 0) {
+      showAlert("Lista Vazia", "Não há itens cadastrados para excluir.");
+      return;
+    }
+
+    showConfirm(
+      "🚨 Excluir TODOS os itens",
+      "Tem a certeza absoluta de que deseja EXCLUIR TODOS os itens cadastrados?\n\nEsta ação limpará completamente a sua tabela atual e não pode ser desfeita facilmente.",
+      async () => {
+        setLoading(true);
+        const res = await deleteAllItems();
+        if (res.success) {
+          await loadData();
+          showAlert(
+            "Sucesso",
+            "Todos os itens foram excluídos da base de dados.",
+          );
+        } else {
+          showAlert(
+            "Erro Grave",
+            res.error || "Erro ao excluir itens. Tente novamente.",
+          );
+          setLoading(false);
+        }
+      },
+    );
+  }
+
   async function handleImport(parsedData: ParsedCSVItem[]) {
     setLoading(true);
     let successCount = 0;
     let errorCount = 0;
 
     for (const item of parsedData) {
-      // Agora comparamos os CÓDIGOS que vieram na planilha com os CÓDIGOS reais dos setores
       const matchedSectorIds = item.sectorCodes
-        .map((code) => {
+        .map((c) => {
           const found = sectors.find(
-            (s) => s.code.toLowerCase() === code.toLowerCase(),
+            (s) => s.code.toLowerCase() === c.toLowerCase(),
           );
           return found?.id;
         })
@@ -198,10 +283,11 @@ export function ItemsAdmin() {
       else errorCount++;
     }
 
-    alert(
-      `Importação finalizada!\n✅ Sucesso: ${successCount}\n❌ Erros (códigos duplicados): ${errorCount}`,
-    );
     loadData();
+    showAlert(
+      "Importação Finalizada",
+      `Resumo da operação:\n\n✅ Sucesso: ${successCount} itens cadastrados.\n❌ Erros: ${errorCount} itens falharam (verifique se já existiam códigos duplicados).`,
+    );
   }
 
   return (
@@ -209,6 +295,17 @@ export function ItemsAdmin() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-semibold">Itens cadastrados ({items.length})</h2>
         <div className="flex flex-wrap items-center gap-2">
+          {items.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleDeleteAll}
+              className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            >
+              <TrashIcon className="size-4" />
+              <span className="hidden sm:inline">Excluir Todos</span>
+            </Button>
+          )}
+
           <Button
             variant="outline"
             onClick={downloadTemplate}
@@ -217,7 +314,9 @@ export function ItemsAdmin() {
             <ArrowDownTrayIcon className="size-4" />
             <span className="hidden sm:inline">Baixar Modelo</span>
           </Button>
+
           <CsvImporter onImport={handleImport} />
+
           <Button onClick={openNew}>
             <PlusIcon className="size-5 mr-1" />
             Novo Item
@@ -255,7 +354,6 @@ export function ItemsAdmin() {
                 className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/50"
               >
                 <div className="min-w-0 flex-1">
-                  {/* Destacando o Código */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
                       {it.code}
@@ -310,17 +408,16 @@ export function ItemsAdmin() {
         />
       )}
 
+      {/* MODAL DE CADASTRO / EDIÇÃO */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editId ? "Editar Item" : "Novo Item"}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-2">
-            {/* NOVO CAMPO: Código */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="item-code" className="font-bold">
-                Código de Barras / Referência{" "}
-                <span className="text-destructive">*</span>
+                Código <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="item-code"
@@ -429,6 +526,48 @@ export function ItemsAdmin() {
               Cancelar
             </DialogClose>
             <Button onClick={save}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL GLOBAL DE AVISOS E CONFIRMAÇÕES */}
+      <Dialog
+        open={feedback.open}
+        onOpenChange={(open) => setFeedback((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle
+              className={feedback.type === "confirm" ? "text-destructive" : ""}
+            >
+              {feedback.title}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* A classe whitespace-pre-wrap faz com que as quebras de linha (\n) do texto sejam respeitadas na tela */}
+          <div className="py-4 text-sm text-muted-foreground whitespace-pre-wrap">
+            {feedback.message}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            {feedback.type === "confirm" ? (
+              <>
+                <Button variant="outline" onClick={closeFeedback}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    feedback.onConfirm?.();
+                    closeFeedback();
+                  }}
+                >
+                  Confirmar Exclusão
+                </Button>
+              </>
+            ) : (
+              <Button onClick={closeFeedback}>OK, Entendi</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
