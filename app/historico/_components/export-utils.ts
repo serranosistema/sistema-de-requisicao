@@ -20,6 +20,7 @@ export interface FullRequisition {
 export const exportCSV = (reqs: FullRequisition[], title: string) => {
   let csvContent = "";
 
+  // setor fixo "17" (Almox. Central) para origem, e o código do setor da requisição para destino
   reqs.forEach((req) => {
     const codDestino = req.sector.code;
     const codOrigem = "17";
