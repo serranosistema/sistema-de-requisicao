@@ -449,35 +449,45 @@ export default function DashboardPage() {
             </div>
 
             {/* ── KPIs ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <KpiCard
-                label="Requisições no período"
-                value={totalReqs}
-                icon={ClockIcon}
-                tint="bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
-                large
-              />
-              <KpiCard
-                label="Setores ativos"
-                value={activeSectors}
-                sub={`de ${totalSectorsCount} cadastrados`}
-                icon={BuildingStorefrontIcon}
-                tint="bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300"
-              />
-              <KpiCard
-                label="Insumo líder"
-                value={topItemLabel}
-                sub={topItemEntry ? `${topItemEntry.qty} unidades` : undefined}
-                icon={FireIcon}
-                tint="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-              />
-              <KpiCard
-                label="Volume total separado"
-                value={totalVolume}
-                sub="unidades no período"
-                icon={CubeTransparentIcon}
-                tint="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-              />
+            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="w-[85vw] shrink-0 snap-center sm:w-auto">
+                <KpiCard
+                  label="Requisições no período"
+                  value={totalReqs}
+                  icon={ClockIcon}
+                  tint="bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                  large
+                />
+              </div>
+              <div className="w-[85vw] shrink-0 snap-center sm:w-auto">
+                <KpiCard
+                  label="Setores ativos"
+                  value={activeSectors}
+                  sub={`de ${totalSectorsCount} cadastrados`}
+                  icon={BuildingStorefrontIcon}
+                  tint="bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300"
+                />
+              </div>
+              <div className="w-[85vw] shrink-0 snap-center sm:w-auto">
+                <KpiCard
+                  label="Insumo líder"
+                  value={topItemLabel}
+                  sub={
+                    topItemEntry ? `${topItemEntry.qty} unidades` : undefined
+                  }
+                  icon={FireIcon}
+                  tint="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                />
+              </div>
+              <div className="w-[85vw] shrink-0 snap-center sm:w-auto">
+                <KpiCard
+                  label="Volume total separado"
+                  value={totalVolume}
+                  sub="unidades no período"
+                  icon={CubeTransparentIcon}
+                  tint="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                />
+              </div>
             </div>
 
             {isEmpty && (

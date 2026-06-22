@@ -173,33 +173,37 @@ export default function SeparacaoPage() {
   if (!sectorId) {
     return (
       <AppShell title="Reqi - Separação">
-        <div className="mx-auto max-w-4xl pb-20">
-          <div className="mb-8 mt-4 text-center sm:text-left">
-            <h2 className="text-2xl font-bold tracking-tight">
-              Iniciar Separação
-            </h2>
-            <p className="text-muted-foreground mt-1 text-lg">
-              Para qual setor você vai separar insumos agora?
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {sectors.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setSectorId(s.id)}
-                className="flex min-h-40 flex-col items-center justify-center gap-4 rounded-2xl border-2 border-border bg-card p-6 text-center transition-all hover:border-primary hover:bg-primary/5 active:scale-95"
-              >
-                <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <BuildingStorefrontIcon className="size-7" />
-                </div>
-                <span className="text-base font-semibold">{s.name}</span>
-              </button>
-            ))}
-            {sectors.length === 0 && (
-              <p className="col-span-full py-12 text-center text-muted-foreground">
-                Nenhum setor cadastrado. Vá em Cadastros primeiro.
-              </p>
-            )}
+        <div className="flex h-full flex-col -m-4 md:-m-6">
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
+            <div className="mx-auto max-w-4xl pb-20">
+              <div className="mb-8 mt-4 text-center sm:text-left">
+                <h2 className="text-2xl font-bold tracking-tight">
+                  Iniciar Separação
+                </h2>
+                <p className="text-muted-foreground mt-1 text-lg">
+                  Para qual setor você vai separar insumos agora?
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {sectors.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSectorId(s.id)}
+                    className="flex min-h-40 flex-col items-center justify-center gap-4 rounded-2xl border-2 border-border bg-card p-6 text-center transition-all hover:border-primary hover:bg-primary/5 active:scale-95"
+                  >
+                    <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <BuildingStorefrontIcon className="size-7" />
+                    </div>
+                    <span className="text-base font-semibold">{s.name}</span>
+                  </button>
+                ))}
+                {sectors.length === 0 && (
+                  <p className="col-span-full py-12 text-center text-muted-foreground">
+                    Nenhum setor cadastrado. Vá em Cadastros primeiro.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </AppShell>
@@ -208,174 +212,176 @@ export default function SeparacaoPage() {
 
   return (
     <AppShell title="Separando Insumos">
-      {/* O pb-24 garante que há um espaço no final da lista para a navegação inferior nativa não tampar nada */}
-      <div className="mx-auto max-w-4xl pb-24">
-        {/* CABEÇALHO: Setor Atual */}
-        <div className="flex items-center gap-3 mb-6">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleBack}
-            className="h-10 w-10 rounded-xl shrink-0"
-          >
-            <ArrowLeftIcon className="size-5" />
-          </Button>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider leading-tight">
-              Setor
-            </p>
-            <p className="text-lg sm:text-xl font-bold text-primary leading-tight truncate">
-              {sectors.find((s) => s.id === sectorId)?.name}
-            </p>
-          </div>
-        </div>
+      <div className="flex h-full flex-col -m-4 md:-m-6">
+        <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
+          <div className="mx-auto max-w-4xl pb-24">
+            {/* CABEÇALHO: Setor Atual */}
+            <div className="flex items-center gap-3 mb-6">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleBack}
+                className="h-10 w-10 rounded-xl shrink-0"
+              >
+                <ArrowLeftIcon className="size-5" />
+              </Button>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider leading-tight">
+                  Setor
+                </p>
+                <p className="text-lg sm:text-xl font-bold text-primary leading-tight truncate">
+                  {sectors.find((s) => s.id === sectorId)?.name}
+                </p>
+              </div>
+            </div>
 
-        {/* CARRINHO TIPO E-COMMERCE NO TOPO */}
-        <div
-          className={cn(
-            "flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 mb-6 rounded-2xl border-2 transition-all",
-            selectedCount > 0
-              ? "border-primary bg-primary/5 shadow-sm"
-              : "border-border bg-card",
-          )}
-        >
-          <div className="flex items-center gap-3">
+            {/* CARRINHO TIPO E-COMMERCE NO TOPO */}
             <div
               className={cn(
-                "p-2.5 rounded-xl transition-colors",
+                "flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 mb-6 rounded-2xl border-2 transition-all",
                 selectedCount > 0
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground",
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-border bg-card",
               )}
             >
-              <ArchiveBoxArrowDownIcon className="size-6" />
-            </div>
-            <div>
-              <p className="font-bold text-lg leading-none">
-                {selectedCount} {selectedCount === 1 ? "insumo" : "insumos"}
-              </p>
-              <p className="text-sm text-muted-foreground">no carrinho</p>
-            </div>
-          </div>
-
-          {/* Botão de Salvar limpo, sem ícone, largo no mobile */}
-          <Button
-            size="lg"
-            className="w-full sm:w-auto font-bold rounded-xl h-12"
-            onClick={handleSave}
-            disabled={selectedCount === 0 || saving}
-          >
-            {saving ? "Salvando..." : "Baixar Estoque"}
-          </Button>
-        </div>
-
-        {/* BARRA DE BUSCA E FILTRO */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar insumo..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12 text-base rounded-xl"
-            />
-          </div>
-          <Button
-            variant={showOnlySelected ? "default" : "outline"}
-            className="h-12 rounded-xl px-4 w-full sm:w-auto"
-            onClick={() => setShowOnlySelected((v) => !v)}
-          >
-            <FunnelIcon
-              className={cn("size-5", showOnlySelected ? "mr-2" : "")}
-            />
-            <span
-              className={cn(
-                "font-semibold",
-                showOnlySelected ? "inline" : "hidden sm:inline",
-              )}
-            >
-              Revisar ({selectedCount})
-            </span>
-          </Button>
-        </div>
-
-        {/* LISTA DE INSUMOS */}
-        <div className="flex flex-col gap-3">
-          {filteredItems.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-border p-12 text-center mt-4">
-              <p className="text-base text-muted-foreground font-medium">
-                {showOnlySelected
-                  ? "Nenhum insumo no carrinho ainda."
-                  : searchQuery.trim()
-                    ? `Nenhum resultado para "${searchQuery}".`
-                    : "Nenhum insumo vinculado a este setor."}
-              </p>
-            </div>
-          ) : (
-            filteredItems.map((item) => {
-              const qtyStr = quantities[item.id] || "";
-              const qtyValue = parseBrFloat(qtyStr);
-              const active = qtyValue > 0;
-
-              return (
+              <div className="flex items-center gap-3">
                 <div
-                  key={item.id}
                   className={cn(
-                    "flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border-2 p-4 transition-all",
-                    active
-                      ? "border-primary bg-primary/5 shadow-sm"
-                      : "border-border bg-card",
+                    "p-2.5 rounded-xl transition-colors",
+                    selectedCount > 0
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {/* Dados do Produto */}
-                  <div className="min-w-0">
-                    <p className="font-semibold text-base sm:text-lg">
-                      {item.name}
-                    </p>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Unidade:{" "}
-                      <span className="text-foreground">{item.unit}</span>
-                    </p>
-                  </div>
-
-                  {/* Controles de Quantidade (No celular fica em baixo e ocupa a largura) */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-1 sm:mt-0">
-                    <Button
-                      variant={active ? "default" : "outline"}
-                      size="icon"
-                      className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl shrink-0"
-                      onClick={() => adjustQty(item.id, item.unit, -1)}
-                      disabled={qtyValue <= 0}
-                    >
-                      <MinusIcon className="size-5" />
-                    </Button>
-
-                    {/* Oculta as setinhas feias de input type="number" nativo usando as classes appearance */}
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      value={qtyStr}
-                      placeholder="0"
-                      onWheel={(e) => e.currentTarget.blur()}
-                      onChange={(e) =>
-                        handleQtyChange(item.id, item.unit, e.target.value)
-                      }
-                      className="h-10 sm:h-11 flex-1 sm:w-20 text-center text-lg font-bold rounded-xl border-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-
-                    <Button
-                      variant={active ? "default" : "outline"}
-                      size="icon"
-                      className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl shrink-0"
-                      onClick={() => adjustQty(item.id, item.unit, 1)}
-                    >
-                      <PlusIcon className="size-5" />
-                    </Button>
-                  </div>
+                  <ArchiveBoxArrowDownIcon className="size-6" />
                 </div>
-              );
-            })
-          )}
+                <div>
+                  <p className="font-bold text-lg leading-none">
+                    {selectedCount} {selectedCount === 1 ? "insumo" : "insumos"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">no carrinho</p>
+                </div>
+              </div>
+
+              {/* Botão de Salvar limpo, sem ícone, largo no mobile */}
+              <Button
+                size="lg"
+                className="w-full sm:w-auto font-bold rounded-xl h-12 shrink-0"
+                onClick={handleSave}
+                disabled={selectedCount === 0 || saving}
+              >
+                {saving ? "Salvando..." : "Baixar Estoque"}
+              </Button>
+            </div>
+
+            {/* BARRA DE BUSCA E FILTRO */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <div className="relative flex-1">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar insumo..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-12 text-base rounded-xl"
+                />
+              </div>
+              <Button
+                variant={showOnlySelected ? "default" : "outline"}
+                className="h-12 rounded-xl px-4 w-full sm:w-auto"
+                onClick={() => setShowOnlySelected((v) => !v)}
+              >
+                <FunnelIcon
+                  className={cn("size-5", showOnlySelected ? "mr-2" : "")}
+                />
+                <span
+                  className={cn(
+                    "font-semibold",
+                    showOnlySelected ? "inline" : "hidden sm:inline",
+                  )}
+                >
+                  Revisar ({selectedCount})
+                </span>
+              </Button>
+            </div>
+
+            {/* LISTA DE INSUMOS */}
+            <div className="flex flex-col gap-3">
+              {filteredItems.length === 0 ? (
+                <div className="rounded-2xl border-2 border-dashed border-border p-12 text-center mt-4">
+                  <p className="text-base text-muted-foreground font-medium">
+                    {showOnlySelected
+                      ? "Nenhum insumo no carrinho ainda."
+                      : searchQuery.trim()
+                        ? `Nenhum resultado para "${searchQuery}".`
+                        : "Nenhum insumo vinculado a este setor."}
+                  </p>
+                </div>
+              ) : (
+                filteredItems.map((item) => {
+                  const qtyStr = quantities[item.id] || "";
+                  const qtyValue = parseBrFloat(qtyStr);
+                  const active = qtyValue > 0;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border-2 p-4 transition-all",
+                        active
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-border bg-card",
+                      )}
+                    >
+                      {/* Dados do Produto */}
+                      <div className="min-w-0">
+                        <p className="font-semibold text-base sm:text-lg">
+                          {item.name}
+                        </p>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Unidade:{" "}
+                          <span className="text-foreground">{item.unit}</span>
+                        </p>
+                      </div>
+
+                      {/* Controles de Quantidade */}
+                      <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+                        <Button
+                          variant={active ? "default" : "outline"}
+                          size="icon"
+                          className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl shrink-0"
+                          onClick={() => adjustQty(item.id, item.unit, -1)}
+                          disabled={qtyValue <= 0}
+                        >
+                          <MinusIcon className="size-5" />
+                        </Button>
+
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={qtyStr}
+                          placeholder="0"
+                          onWheel={(e) => e.currentTarget.blur()}
+                          onChange={(e) =>
+                            handleQtyChange(item.id, item.unit, e.target.value)
+                          }
+                          className="h-10 sm:h-11 flex-1 sm:w-20 text-center text-lg font-bold rounded-xl border-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+
+                        <Button
+                          variant={active ? "default" : "outline"}
+                          size="icon"
+                          className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl shrink-0"
+                          onClick={() => adjustQty(item.id, item.unit, 1)}
+                        >
+                          <PlusIcon className="size-5" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </AppShell>
