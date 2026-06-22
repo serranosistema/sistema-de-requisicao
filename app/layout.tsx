@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { StoreProvider } from "@/lib/store";
+import { PWAUpdater } from "@/components/pwa-updater";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -15,7 +17,7 @@ export const metadata: Metadata = {
   title: "Requisição Digital de Insumos",
   description:
     "Sistema de requisição de insumos para operação interna de varejo e alimentação",
-  generator: "v0.app",
+  manifest: "/manifest.json?v=1", // Cache Busting ativado!
   icons: {
     icon: [
       {
@@ -51,14 +53,18 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
+        <PWAUpdater />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
+          {/* Deixe o children apenas AQUI dentro do StoreProvider */}
           <StoreProvider>{children}</StoreProvider>
         </ThemeProvider>
+
+        <Toaster />
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
