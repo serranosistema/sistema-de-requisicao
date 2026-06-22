@@ -36,3 +36,31 @@ export async function createRequisition(
     return { success: false, error: "Não foi possível salvar a requisição." };
   }
 }
+
+export async function getRequisitions() {
+  try {
+    const storeId = await getDefaultStoreId();
+
+    const reqs = await prisma.requisition.findMany({
+      where: { storeId },
+      include: {
+        sector: {
+          select: { id: true, name: true, code: true },
+        },
+        items: {
+          include: {
+            item: {
+              select: { id: true, name: true, code: true, unit: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return reqs;
+  } catch (error) {
+    console.error("Erro ao buscar requisições:", error);
+    return [];
+  }
+}
