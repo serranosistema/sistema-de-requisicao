@@ -98,17 +98,35 @@ export function ItemsAdmin() {
   }
 
   async function loadData() {
-    setLoading(true);
-    const [fetchedItems, fetchedSectors] = await Promise.all([
-      getItems(),
-      getSectors(),
-    ]);
-    setItems(fetchedItems as DbItem[]);
-    setSectors(fetchedSectors);
-    setLoading(false);
+    try {
+      const [fetchedItems, fetchedSectors] = await Promise.all([
+        getItems(),
+        getSectors(),
+      ]);
+      setItems(fetchedItems as DbItem[]);
+      setSectors(fetchedSectors);
+
+      // Atualiza o cache silenciosamente
+      sessionStorage.setItem("@val-items", JSON.stringify(fetchedItems));
+      sessionStorage.setItem("@val-sectors", JSON.stringify(fetchedSectors));
+    } catch (error) {
+      console.error("Erro ao buscar dados", error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
+    // 1. Tenta carregar do cache para renderização instantânea
+    const cachedItems = sessionStorage.getItem("@val-items");
+    const cachedSectors = sessionStorage.getItem("@val-sectors");
+
+    if (cachedItems && cachedSectors) {
+      setItems(JSON.parse(cachedItems));
+      setSectors(JSON.parse(cachedSectors));
+      setLoading(false);
+    }
+    // 2. Sempre busca do banco em background
     loadData();
   }, []);
 

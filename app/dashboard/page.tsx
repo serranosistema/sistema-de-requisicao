@@ -37,11 +37,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-// Importando as ações reais do servidor
 import { getRequisitions } from "@/app/actions/requisitions";
 import { getSectors } from "@/app/actions/sectors";
 
-// Tipagem baseada no retorno do Prisma
 interface DbReqItem {
   id: string;
   quantity: number;
@@ -83,8 +81,6 @@ const CHART_COLORS = [
   "#64748b",
 ];
 
-// ─── Tooltip customizado ─────────────────────────────────────────────────────
-
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
@@ -105,8 +101,6 @@ function CustomTooltip({ active, payload, label }: any) {
     </div>
   );
 }
-
-// ─── Componente de card KPI ──────────────────────────────────────────────────
 
 function KpiCard({
   label,
@@ -185,17 +179,40 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<number>(30);
 
-  // Carrega os dados reais do banco
+  // ── OTIMIZAÇÃO: Stale-While-Revalidate (SWR) Manual ──
   useEffect(() => {
     async function fetchData() {
-      setLoading(true);
-      const [fetchedReqs, fetchedSectors] = await Promise.all([
-        getRequisitions(),
-        getSectors(),
-      ]);
-      setRequisitions(fetchedReqs as DbRequisition[]);
-      setTotalSectorsCount(fetchedSectors.length);
-      setLoading(false);
+      // 1. Tenta pegar os dados cacheados na sessão para carregamento instantâneo
+      const cachedReqs = sessionStorage.getItem("@val-dash-reqs");
+      const cachedSectors = sessionStorage.getItem("@val-dash-sectors");
+
+      if (cachedReqs && cachedSectors) {
+        setRequisitions(JSON.parse(cachedReqs));
+        setTotalSectorsCount(JSON.parse(cachedSectors));
+        setLoading(false); // Remove o loading na hora!
+      }
+
+      // 2. Busca no banco de dados em background para ter certeza que está atualizado
+      try {
+        const [fetchedReqs, fetchedSectors] = await Promise.all([
+          getRequisitions(),
+          getSectors(),
+        ]);
+
+        // 3. Atualiza os estados e guarda a versão mais fresca no cache
+        setRequisitions(fetchedReqs as DbRequisition[]);
+        setTotalSectorsCount(fetchedSectors.length);
+
+        sessionStorage.setItem("@val-dash-reqs", JSON.stringify(fetchedReqs));
+        sessionStorage.setItem(
+          "@val-dash-sectors",
+          JSON.stringify(fetchedSectors.length),
+        );
+      } catch (error) {
+        console.error("Erro ao atualizar o dashboard:", error);
+      } finally {
+        setLoading(false); // Caso o cache estivesse vazio, remove o loading agora
+      }
     }
     fetchData();
   }, []);
@@ -295,7 +312,6 @@ export default function DashboardPage() {
 
   // ── Composição por setor × insumo (Stacked BarChart) ──
   const stackedData = useMemo(() => {
-    // Pegar os top setores
     const sectorMap: Record<string, { id: string; name: string; qty: number }> =
       {};
     reqs.forEach((r) => {

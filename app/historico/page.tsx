@@ -54,13 +54,27 @@ export default function HistoricoPage() {
   const [activeMonth, setActiveMonth] = useState<number | null>(null);
   const [searchDate, setSearchDate] = useState<string>("");
 
+  // ── OTIMIZAÇÃO: Stale-While-Revalidate (SWR) Manual ──
   useEffect(() => {
     async function fetchReqs() {
-      setLoading(true);
-      const data = await getRequisitions();
-      // @ts-ignore - A tipagem cruza as datas como string na rede e Date no cliente, isso garante o parse
-      setRequisitions(data);
-      setLoading(false);
+      // 1. Tenta carregar do cache para renderização instantânea
+      const cached = sessionStorage.getItem("@val-historico-reqs");
+      if (cached) {
+        setRequisitions(JSON.parse(cached));
+        setLoading(false); // Já mostra a tela e libera o loading
+      }
+
+      // 2. Busca no BD em background para puxar as requisições mais recentes
+      try {
+        const data = await getRequisitions();
+        // @ts-ignore - A tipagem cruza as datas como string na rede e Date no cliente
+        setRequisitions(data);
+        sessionStorage.setItem("@val-historico-reqs", JSON.stringify(data));
+      } catch (error) {
+        console.error("Erro ao atualizar histórico:", error);
+      } finally {
+        setLoading(false); // Caso o cache estivesse vazio
+      }
     }
     fetchReqs();
   }, []);

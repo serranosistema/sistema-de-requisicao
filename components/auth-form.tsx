@@ -128,7 +128,7 @@ export function AuthForm() {
             size="lg"
           >
             <ArrowDownTrayIcon className="size-6" />
-            Instalar Val
+            Instalar App
           </Button>
         </div>
       )}

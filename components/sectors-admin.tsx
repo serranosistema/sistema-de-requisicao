@@ -41,13 +41,26 @@ export function SectorsAdmin() {
   const [name, setName] = useState("");
 
   async function loadSectors() {
-    setLoading(true);
-    const data = await getSectors();
-    setSectors(data as DbSector[]);
-    setLoading(false);
+    try {
+      const data = await getSectors();
+      setSectors(data as DbSector[]);
+      // Atualiza o cache silenciosamente
+      sessionStorage.setItem("@val-sectors", JSON.stringify(data));
+    } catch (error) {
+      console.error("Erro ao buscar setores", error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
+    // 1. Tenta carregar do cache para renderização instantânea
+    const cached = sessionStorage.getItem("@val-sectors");
+    if (cached) {
+      setSectors(JSON.parse(cached));
+      setLoading(false);
+    }
+    // 2. Sempre busca do banco em background para garantir dados frescos
     loadSectors();
   }, []);
 
