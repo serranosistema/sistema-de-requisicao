@@ -13,9 +13,10 @@ model Store {
   cnpj      String?  @unique
   
   // Relacionamentos
-  users     User[]
-  sectors   Sector[] // Uma loja tem vários setores
-  items     Item[]   // Uma loja tem vários itens
+  users       User[]
+  sectors     Sector[]
+  items       Item[]
+  requisitions Requisition[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -42,16 +43,16 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
-// === NOVAS TABELAS ABAIXO ===
-
 model Sector {
   id        String   @id @default(cuid())
-  code      String   @unique // <-- NOVO CAMPO
+  code      String   @unique
   name      String
 
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id])
-  items     Item[]   
+  
+  items     Item[]
+  requisitions Requisition[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -59,18 +60,48 @@ model Sector {
 
 model Item {
   id        String   @id @default(cuid())
-  code      String   @unique // <-- NOVO CAMPO OBRIGATÓRIO
-  name      String   // Vamos usar esse campo para a "Descrição"
+  code      String   @unique
+  name      String
   unit      String   @default("UN")
   cost      Float?   
   
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id])
 
-  sectors   Sector[] 
+  sectors        Sector[]
+  requisitionItems RequisitionItem[]
   
   isActive  Boolean  @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Requisition {
+  id        String   @id @default(cuid())
+  
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  
+  sectorId  String
+  sector    Sector   @relation(fields: [sectorId], references: [id])
+  
+  items     RequisitionItem[]
+  
+  status    String   @default("CONCLUIDA")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RequisitionItem {
+  id            String   @id @default(cuid())
+  
+  requisitionId String
+  requisition   Requisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  
+  itemId        String
+  item          Item     @relation(fields: [itemId], references: [id])
+  
+  quantity      Float
 }
