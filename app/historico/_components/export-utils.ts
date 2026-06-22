@@ -18,22 +18,17 @@ export interface FullRequisition {
 }
 
 export const exportCSV = (reqs: FullRequisition[], title: string) => {
-  // Atualizado com as colunas de Códigos
-  let csvContent =
-    "Data,Cod. Setor,Setor,Status,Cod. Insumo,Insumo,Quantidade,Unidade\n";
+  let csvContent = "";
 
   reqs.forEach((req) => {
-    const data = formatDatePTBR(req.createdAt);
-    const codSetor = req.sector.code;
-    const setor = req.sector.name;
-    const status = req.status;
+    const codDestino = req.sector.code;
+    const codOrigem = "17";
 
     req.items.forEach((reqItem) => {
       const codInsumo = reqItem.item.code;
-      const nomeInsumo = reqItem.item.name;
-      const qtd = reqItem.quantity;
-      const un = reqItem.item.unit;
-      csvContent += `"${data}","${codSetor}","${setor}","${status}","${codInsumo}","${nomeInsumo}","${qtd}","${un}"\n`;
+      const qtd = reqItem.quantity.toString().replace(".", ",");
+
+      csvContent += `"${codInsumo}","${qtd}","${codOrigem}","${codDestino}"\n`;
     });
   });
 
@@ -87,8 +82,7 @@ export const exportPDF = (reqs: FullRequisition[], title: string) => {
               (reqItem) => `
             <tr>
               <td>${reqItem.item.code}</td>
-              <td>${reqItem.item.name}</td>
-              <td>${reqItem.quantity}</td>
+              <td>${reqItem.quantity.toString().replace(".", ",")}</td>
               <td>${reqItem.item.unit}</td>
             </tr>
           `,
