@@ -15,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   getSectors,
@@ -26,7 +25,7 @@ import {
 
 interface DbSector {
   id: string;
-  code: string; // <-- Novo
+  code: string;
   name: string;
 }
 
@@ -36,7 +35,9 @@ export function SectorsAdmin() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
 
-  const [code, setCode] = useState(""); // <-- Estado do código
+  // Novos estados para otimização e controle
+  const [isSaving, setIsSaving] = useState(false);
+  const [code, setCode] = useState("");
   const [name, setName] = useState("");
 
   async function loadSectors() {
@@ -64,24 +65,30 @@ export function SectorsAdmin() {
     setOpen(true);
   }
 
-  async function save() {
+  async function save(e?: React.FormEvent) {
+    if (e) e.preventDefault(); // Evita que a página recarregue ao apertar Enter
+
     if (!code.trim() || !name.trim()) {
       alert("Código e Nome são obrigatórios!");
       return;
     }
+
+    setIsSaving(true); // Bloqueia o botão
 
     if (editId) {
       const res = await updateSector(editId, {
         code: code.trim(),
         name: name.trim(),
       });
-      if (res.success) loadSectors();
+      if (res.success) await loadSectors();
       else alert(res.error);
     } else {
       const res = await createSector({ code: code.trim(), name: name.trim() });
-      if (res.success) loadSectors();
+      if (res.success) await loadSectors();
       else alert(res.error);
     }
+
+    setIsSaving(false); // Desbloqueia o botão
     setOpen(false);
   }
 
@@ -123,17 +130,13 @@ export function SectorsAdmin() {
                 <span className="font-medium truncate">{s.name}</span>
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon-lg"
-                  onClick={() => openEdit(s)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
                   <PencilSquareIcon className="size-5" />
                 </Button>
                 <Button
                   variant="ghost"
-                  size="icon-lg"
-                  className="text-destructive"
+                  size="icon"
+                  className="text-destructive hover:bg-destructive/10"
                   onClick={() => handleDelete(s.id)}
                 >
                   <TrashIcon className="size-5" />
@@ -144,12 +147,15 @@ export function SectorsAdmin() {
         </div>
       )}
 
+      {/* MODAL DE CRIAÇÃO/EDIÇÃO */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editId ? "Editar Setor" : "Novo Setor"}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
+
+          {/* Formulário otimizado */}
+          <form onSubmit={save} className="flex flex-col gap-4 py-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="sector-code" className="font-bold">
                 Código (ID do Setor) <span className="text-destructive">*</span>
@@ -160,6 +166,7 @@ export function SectorsAdmin() {
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="Ex: 101"
                 className="h-11 border-primary/30"
+                autoFocus
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -174,13 +181,21 @@ export function SectorsAdmin() {
                 className="h-11"
               />
             </div>
-          </div>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>
-              Cancelar
-            </DialogClose>
-            <Button onClick={save}>Salvar</Button>
-          </DialogFooter>
+
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isSaving}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

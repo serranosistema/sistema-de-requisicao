@@ -20,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -52,7 +51,6 @@ interface DbItem {
   sectors: { id: string; code: string; name: string }[];
 }
 
-// Tipo para controlar o nosso modal de avisos global
 type FeedbackDialogState = {
   open: boolean;
   type: "alert" | "confirm";
@@ -70,6 +68,7 @@ export function ItemsAdmin() {
 
   // Estados do Modal de Cadastro
   const [open, setOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // <-- Estado de proteção contra cliques duplos
   const [editId, setEditId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -79,7 +78,6 @@ export function ItemsAdmin() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Estado do Modal de Avisos (Substitui alert e confirm nativos)
   const [feedback, setFeedback] = useState<FeedbackDialogState>({
     open: false,
     type: "alert",
@@ -87,7 +85,6 @@ export function ItemsAdmin() {
     message: "",
   });
 
-  // Funções ajudantes para abrir o modal de feedback
   function showAlert(title: string, message: string) {
     setFeedback({ open: true, type: "alert", title, message });
   }
@@ -169,7 +166,9 @@ export function ItemsAdmin() {
     );
   }
 
-  async function save() {
+  async function save(e?: React.FormEvent) {
+    if (e) e.preventDefault(); // <-- Previne o reload ao apertar Enter
+
     if (!code.trim()) {
       showAlert(
         "Campo Obrigatório",
@@ -177,6 +176,8 @@ export function ItemsAdmin() {
       );
       return;
     }
+
+    setIsSaving(true); // <-- Trava o botão de salvar
 
     const parsedCost = cost ? parseFloat(cost.replace(",", ".")) : undefined;
     const data = {
@@ -190,7 +191,7 @@ export function ItemsAdmin() {
     if (editId) {
       const res = await updateItem(editId, data);
       if (res.success) {
-        loadData();
+        await loadData();
         setOpen(false);
       } else {
         showAlert(
@@ -201,7 +202,7 @@ export function ItemsAdmin() {
     } else {
       const res = await createItem(data);
       if (res.success) {
-        loadData();
+        await loadData();
         setOpen(false);
       } else {
         showAlert(
@@ -210,6 +211,8 @@ export function ItemsAdmin() {
         );
       }
     }
+
+    setIsSaving(false); // <-- Libera o botão caso dê erro e a modal não feche
   }
 
   function handleDelete(id: string) {
@@ -380,15 +383,15 @@ export function ItemsAdmin() {
                 <div className="flex shrink-0 items-center gap-1">
                   <Button
                     variant="ghost"
-                    size="icon-lg"
+                    size="icon"
                     onClick={() => openEdit(it)}
                   >
                     <PencilSquareIcon className="size-5" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="icon-lg"
-                    className="text-destructive"
+                    size="icon"
+                    className="text-destructive hover:bg-destructive/10"
                     onClick={() => handleDelete(it.id)}
                   >
                     <TrashIcon className="size-5" />
@@ -408,13 +411,14 @@ export function ItemsAdmin() {
         />
       )}
 
-      {/* MODAL DE CADASTRO / EDIÇÃO */}
+      {/* MODAL DE CADASTRO / EDIÇÃO OTIMIZADO PARA FORMULÁRIO */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editId ? "Editar Item" : "Novo Item"}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
+
+          <form onSubmit={save} className="flex flex-col gap-4 py-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="item-code" className="font-bold">
                 Código <span className="text-destructive">*</span>
@@ -425,6 +429,7 @@ export function ItemsAdmin() {
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="Ex: 789101010"
                 className="h-11 border-primary/30 focus-visible:ring-primary/50"
+                autoFocus
               />
             </div>
 
@@ -520,13 +525,21 @@ export function ItemsAdmin() {
                 )}
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>
-              Cancelar
-            </DialogClose>
-            <Button onClick={save}>Salvar</Button>
-          </DialogFooter>
+
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isSaving}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -544,7 +557,6 @@ export function ItemsAdmin() {
             </DialogTitle>
           </DialogHeader>
 
-          {/* A classe whitespace-pre-wrap faz com que as quebras de linha (\n) do texto sejam respeitadas na tela */}
           <div className="py-4 text-sm text-muted-foreground whitespace-pre-wrap">
             {feedback.message}
           </div>
