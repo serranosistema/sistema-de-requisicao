@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ClockIcon,
   BuildingStorefrontIcon,
@@ -34,16 +35,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// Importando as ações reais do servidor
+import { getRequisitions } from "@/app/actions/requisitions";
+import { getSectors } from "@/app/actions/sectors";
 
-function startOfDay(d: Date) {
-  const c = new Date(d);
-  c.setHours(0, 0, 0, 0);
-  return c;
+// Tipagem baseada no retorno do Prisma
+interface DbReqItem {
+  id: string;
+  quantity: number;
+  item: { id: string; name: string; code: string; unit: string };
 }
+
+interface DbRequisition {
+  id: string;
+  createdAt: string | Date;
+  status: string;
+  sector: { id: string; name: string; code: string };
+  items: DbReqItem[];
+}
+
+// ─── helpers ────────────────────────────────────────────────────────────────
 
 function daysAgo(n: number) {
   const d = new Date();
@@ -52,23 +65,22 @@ function daysAgo(n: number) {
   return d;
 }
 
-function shortDate(iso: string) {
+function shortDate(iso: string | Date) {
   return new Date(iso).toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
   });
 }
 
-// paleta de cores diversificada e menos focada no roxo
 const CHART_COLORS = [
-  "#3b82f6", // blue
-  "#10b981", // emerald
-  "#f59e0b", // amber
-  "#ef4444", // red
-  "#8b5cf6", // violet
-  "#0ea5e9", // sky
-  "#f97316", // orange
-  "#64748b", // slate
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#0ea5e9",
+  "#f97316",
+  "#64748b",
 ];
 
 // ─── Tooltip customizado ─────────────────────────────────────────────────────
@@ -142,8 +154,6 @@ function KpiCard({
   );
 }
 
-// ─── Cabeçalho de seção ──────────────────────────────────────────────────────
-
 function SectionHeader({
   title,
   description,
@@ -169,8 +179,26 @@ function SectionHeader({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { requisitions, sectors, sectorName, itemName } = useStore();
+  const [requisitions, setRequisitions] = useState<DbRequisition[]>([]);
+  const router = useRouter();
+  const [totalSectorsCount, setTotalSectorsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<number>(30);
+
+  // Carrega os dados reais do banco
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      const [fetchedReqs, fetchedSectors] = await Promise.all([
+        getRequisitions(),
+        getSectors(),
+      ]);
+      setRequisitions(fetchedReqs as DbRequisition[]);
+      setTotalSectorsCount(fetchedSectors.length);
+      setLoading(false);
+    }
+    fetchData();
+  }, []);
 
   // ── filtro de período ──
   const cutoff = useMemo(() => daysAgo(period), [period]);
@@ -192,26 +220,31 @@ export default function DashboardPage() {
 
   // ── KPIs ──
   const totalReqs = reqs.length;
-  const activeSectors = new Set(reqs.map((r) => r.sectorId)).size;
+  const activeSectors = new Set(reqs.map((r) => r.sector.id)).size;
 
-  const totalsByItem: Record<string, number> = {};
+  const totalsByItem: Record<string, { qty: number; name: string }> = {};
   reqs.forEach((r) =>
-    r.items.forEach(
-      (i) =>
-        (totalsByItem[i.itemId] = (totalsByItem[i.itemId] ?? 0) + i.quantity),
-    ),
+    r.items.forEach((i) => {
+      if (!totalsByItem[i.item.id]) {
+        totalsByItem[i.item.id] = { qty: 0, name: i.item.name };
+      }
+      totalsByItem[i.item.id].qty += i.quantity;
+    }),
   );
-  const topItemEntry = Object.entries(totalsByItem).sort(
-    (a, b) => b[1] - a[1],
+
+  const topItemEntry = Object.values(totalsByItem).sort(
+    (a, b) => b.qty - a.qty,
   )[0];
-  const topItemLabel = topItemEntry ? itemName(topItemEntry[0]) : "—";
-  const totalVolume = Object.values(totalsByItem).reduce((a, b) => a + b, 0);
+  const topItemLabel = topItemEntry ? topItemEntry.name : "—";
+  const totalVolume = Object.values(totalsByItem).reduce(
+    (a, b) => a + b.qty,
+    0,
+  );
 
   // ── Comparativo ao longo do tempo (LineChart Duplo) ──
   const comparativeTimelineData = useMemo(() => {
     const data: { date: string; Atual: number; Anterior: number }[] = [];
 
-    // Preenche o array com os dias do período atual
     for (let d = period - 1; d >= 0; d--) {
       const curDate = new Date();
       curDate.setDate(curDate.getDate() - d);
@@ -220,7 +253,6 @@ export default function DashboardPage() {
       data.push({ date: curStr, Atual: 0, Anterior: 0 });
     }
 
-    // Popula a linha do período Atual
     reqs.forEach((r) => {
       const curStr = shortDate(r.createdAt);
       const idx = data.findIndex((d) => d.date === curStr);
@@ -229,10 +261,9 @@ export default function DashboardPage() {
       }
     });
 
-    // Popula a linha do período Anterior projetando as datas para frente
     prevReqs.forEach((r) => {
       const pDate = new Date(r.createdAt);
-      pDate.setDate(pDate.getDate() + period); // Move os dias para alinhar no mesmo eixo X
+      pDate.setDate(pDate.getDate() + period);
       const curStr = shortDate(pDate.toISOString());
       const idx = data.findIndex((d) => d.date === curStr);
       if (idx !== -1) {
@@ -245,58 +276,62 @@ export default function DashboardPage() {
 
   // ── Ranking de setores por volume (BarChart horizontal) ──
   const sectorRanking = useMemo(() => {
-    const map: Record<string, number> = {};
-    reqs.forEach((r) =>
-      r.items.forEach(
-        (i) => (map[r.sectorId] = (map[r.sectorId] ?? 0) + i.quantity),
-      ),
-    );
-    return Object.entries(map)
-      .map(([id, qty]) => ({ name: sectorName(id), qty }))
+    const map: Record<string, { qty: number; name: string }> = {};
+    reqs.forEach((r) => {
+      if (!map[r.sector.id]) map[r.sector.id] = { qty: 0, name: r.sector.name };
+      r.items.forEach((i) => (map[r.sector.id].qty += i.quantity));
+    });
+    return Object.values(map)
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 8);
-  }, [reqs, sectorName]);
+  }, [reqs]);
 
   // ── Top 6 insumos (BarChart vertical) ──
   const topItems = useMemo(() => {
-    return Object.entries(totalsByItem)
-      .map(([id, qty]) => ({ name: itemName(id), qty }))
+    return Object.values(totalsByItem)
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 6);
-  }, [totalsByItem, itemName]);
+  }, [totalsByItem]);
 
   // ── Composição por setor × insumo (Stacked BarChart) ──
   const stackedData = useMemo(() => {
-    const topSectorIds = [...new Set(reqs.map((r) => r.sectorId))]
-      .map((id) => ({
-        id,
-        qty: reqs
-          .filter((r) => r.sectorId === id)
-          .flatMap((r) => r.items)
-          .reduce((s, i) => s + i.quantity, 0),
-      }))
+    // Pegar os top setores
+    const sectorMap: Record<string, { id: string; name: string; qty: number }> =
+      {};
+    reqs.forEach((r) => {
+      if (!sectorMap[r.sector.id])
+        sectorMap[r.sector.id] = {
+          id: r.sector.id,
+          name: r.sector.name,
+          qty: 0,
+        };
+      r.items.forEach((i) => (sectorMap[r.sector.id].qty += i.quantity));
+    });
+
+    const topSectors = Object.values(sectorMap)
       .sort((a, b) => b.qty - a.qty)
-      .slice(0, 6)
-      .map((x) => x.id);
+      .slice(0, 6);
 
     const topItemIds = Object.entries(totalsByItem)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => b[1].qty - a[1].qty)
       .slice(0, 5)
       .map(([id]) => id);
 
-    return topSectorIds.map((sId) => {
-      const row: Record<string, any> = { setor: sectorName(sId) };
-      const sReqs = reqs.filter((r) => r.sectorId === sId);
+    return topSectors.map((sec) => {
+      const row: Record<string, any> = { setor: sec.name };
+      const sReqs = reqs.filter((r) => r.sector.id === sec.id);
+
       topItemIds.forEach((iId) => {
+        const itemName = totalsByItem[iId].name;
         const qty = sReqs
           .flatMap((r) => r.items)
-          .filter((i) => i.itemId === iId)
+          .filter((i) => i.item.id === iId)
           .reduce((s, i) => s + i.quantity, 0);
-        row[itemName(iId)] = qty || 0;
+        row[itemName] = qty || 0;
       });
       return row;
     });
-  }, [reqs, totalsByItem, sectorName, itemName]);
+  }, [reqs, totalsByItem]);
 
   const stackedKeys = useMemo(() => {
     if (!stackedData.length) return [];
@@ -308,15 +343,17 @@ export default function DashboardPage() {
     const thisWeekCutoff = daysAgo(7);
     const prevWeekCutoff = daysAgo(14);
 
-    const thisWeek: Record<string, number> = {};
-    const prevWeek: Record<string, number> = {};
+    const thisWeek: Record<string, { name: string; qty: number }> = {};
+    const prevWeek: Record<string, { name: string; qty: number }> = {};
 
     requisitions
       .filter((r) => new Date(r.createdAt) >= thisWeekCutoff)
       .forEach((r) =>
-        r.items.forEach(
-          (i) => (thisWeek[i.itemId] = (thisWeek[i.itemId] ?? 0) + i.quantity),
-        ),
+        r.items.forEach((i) => {
+          if (!thisWeek[i.item.id])
+            thisWeek[i.item.id] = { name: i.item.name, qty: 0 };
+          thisWeek[i.item.id].qty += i.quantity;
+        }),
       );
 
     requisitions
@@ -326,9 +363,11 @@ export default function DashboardPage() {
           new Date(r.createdAt) < thisWeekCutoff,
       )
       .forEach((r) =>
-        r.items.forEach(
-          (i) => (prevWeek[i.itemId] = (prevWeek[i.itemId] ?? 0) + i.quantity),
-        ),
+        r.items.forEach((i) => {
+          if (!prevWeek[i.item.id])
+            prevWeek[i.item.id] = { name: i.item.name, qty: 0 };
+          prevWeek[i.item.id].qty += i.quantity;
+        }),
       );
 
     const allIds = new Set([
@@ -338,16 +377,31 @@ export default function DashboardPage() {
 
     return [...allIds]
       .map((id) => {
-        const cur = thisWeek[id] ?? 0;
-        const prev = prevWeek[id] ?? 0;
+        const curObj = thisWeek[id];
+        const prevObj = prevWeek[id];
+        const name = curObj?.name || prevObj?.name || "Desconhecido";
+        const cur = curObj?.qty ?? 0;
+        const prev = prevObj?.qty ?? 0;
         const delta =
           prev === 0 ? null : Math.round(((cur - prev) / prev) * 100);
-        return { id, name: itemName(id), cur, prev, delta };
+        return { id, name, cur, prev, delta };
       })
       .filter((x) => x.cur > 0 || x.prev > 0)
       .sort((a, b) => b.cur - a.cur)
       .slice(0, 8);
-  }, [requisitions, itemName]);
+  }, [requisitions]);
+
+  if (loading) {
+    return (
+      <AppShell title="Dashboard">
+        <div className="flex h-[50vh] items-center justify-center">
+          <p className="text-muted-foreground animate-pulse">
+            Calculando métricas e montando gráficos...
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
 
   const isEmpty = requisitions.length === 0;
 
@@ -384,8 +438,7 @@ export default function DashboardPage() {
                   </SelectContent>
                 </Select>
                 <Button
-                  render={<Link href="/requisicao" />}
-                  nativeButton={false}
+                  onClick={() => router.push("/requisicao")}
                   size="default"
                   className="h-10"
                 >
@@ -407,14 +460,14 @@ export default function DashboardPage() {
               <KpiCard
                 label="Setores ativos"
                 value={activeSectors}
-                sub={`de ${sectors.length} cadastrados`}
+                sub={`de ${totalSectorsCount} cadastrados`}
                 icon={BuildingStorefrontIcon}
                 tint="bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300"
               />
               <KpiCard
                 label="Insumo líder"
                 value={topItemLabel}
-                sub={topItemEntry ? `${topItemEntry[1]} unidades` : undefined}
+                sub={topItemEntry ? `${topItemEntry.qty} unidades` : undefined}
                 icon={FireIcon}
                 tint="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
               />
@@ -435,10 +488,7 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground mt-1 mb-4">
                   Faça a primeira separação para os gráficos aparecerem.
                 </p>
-                <Button
-                  render={<Link href="/requisicao" />}
-                  nativeButton={false}
-                >
+                <Button onClick={() => router.push("/requisicao")}>
                   Iniciar separação
                 </Button>
               </div>
