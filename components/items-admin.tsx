@@ -29,15 +29,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
-import { CsvImporter, ParsedCSVItem } from "@/components/csv-importer";
+
+// Importamos nosso novo componente inteligente
+import { CsvImporter, SmartImportData } from "@/components/csv-importer";
+
+// ATUALIZE A LINHA DE IMPORTAÇÕES DO ITEMS
 import {
   getItems,
   createItem,
   updateItem,
   deleteItem,
   deleteAllItems,
+  bulkImportData, // <-- Adicione esta função aqui
 } from "@/app/actions/items";
-import { getSectors } from "@/app/actions/sectors";
+import { getSectors, createSector } from "@/app/actions/sectors";
 
 const UNITS = ["UN", "KG", "CX", "L"];
 const ITEMS_PER_PAGE = 10;
@@ -68,7 +73,7 @@ export function ItemsAdmin() {
 
   // Estados do Modal de Cadastro
   const [open, setOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // <-- Estado de proteção contra cliques duplos
+  const [isSaving, setIsSaving] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -106,7 +111,6 @@ export function ItemsAdmin() {
       setItems(fetchedItems as DbItem[]);
       setSectors(fetchedSectors);
 
-      // Atualiza o cache silenciosamente
       sessionStorage.setItem("@val-items", JSON.stringify(fetchedItems));
       sessionStorage.setItem("@val-sectors", JSON.stringify(fetchedSectors));
     } catch (error) {
@@ -117,7 +121,6 @@ export function ItemsAdmin() {
   }
 
   useEffect(() => {
-    // 1. Tenta carregar do cache para renderização instantânea
     const cachedItems = sessionStorage.getItem("@val-items");
     const cachedSectors = sessionStorage.getItem("@val-sectors");
 
@@ -126,7 +129,6 @@ export function ItemsAdmin() {
       setSectors(JSON.parse(cachedSectors));
       setLoading(false);
     }
-    // 2. Sempre busca do banco em background
     loadData();
   }, []);
 
@@ -147,12 +149,15 @@ export function ItemsAdmin() {
   );
 
   function downloadTemplate() {
+    // Planilha Modelo no formato exato que você pediu (banco de dados chapado)
     const csvContent =
-      "Codigo,Descricao,Unidade,Cod Setor,Nome do Setor,Custo\n789101010,Farinha de Trigo,KG,101,Cozinha,5.50\n123456789,Ovo,CX,102,Padaria,\n987654321,Amendoim,KG,101/102,Cozinha / Padaria,4.20";
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      "Codigo,Descricao,Unidade,Cod Setor,Nome do Setor\n123,Açúcar,KG,101,Cozinha\n123,Açúcar,KG,102,Padaria\n124,Vinagre,L,101,Cozinha";
+    const blob = new Blob(["\uFEFF" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", "modelo-insumos.csv");
+    link.setAttribute("download", "modelo-insumos-inteligente.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -185,7 +190,7 @@ export function ItemsAdmin() {
   }
 
   async function save(e?: React.FormEvent) {
-    if (e) e.preventDefault(); // <-- Previne o reload ao apertar Enter
+    if (e) e.preventDefault();
 
     if (!code.trim()) {
       showAlert(
@@ -195,7 +200,7 @@ export function ItemsAdmin() {
       return;
     }
 
-    setIsSaving(true); // <-- Trava o botão de salvar
+    setIsSaving(true);
 
     const parsedCost = cost ? parseFloat(cost.replace(",", ".")) : undefined;
     const data = {
@@ -230,7 +235,7 @@ export function ItemsAdmin() {
       }
     }
 
-    setIsSaving(false); // <-- Libera o botão caso dê erro e a modal não feche
+    setIsSaving(false);
   }
 
   function handleDelete(id: string) {
@@ -277,38 +282,34 @@ export function ItemsAdmin() {
     );
   }
 
-  async function handleImport(parsedData: ParsedCSVItem[]) {
+  // A MÁGICA EM LOTE! 1 única requisição, zero timeouts.
+  async function handleImport(data: SmartImportData) {
     setLoading(true);
-    let successCount = 0;
-    let errorCount = 0;
 
-    for (const item of parsedData) {
-      const matchedSectorIds = item.sectorCodes
-        .map((c) => {
-          const found = sectors.find(
-            (s) => s.code.toLowerCase() === c.toLowerCase(),
-          );
-          return found?.id;
-        })
-        .filter(Boolean) as string[];
+    try {
+      const res = await bulkImportData(data);
 
-      const res = await createItem({
-        code: item.code,
-        name: item.name,
-        unit: item.unit.toUpperCase(),
-        cost: item.cost,
-        sectorIds: matchedSectorIds,
-      });
-
-      if (res.success) successCount++;
-      else errorCount++;
+      if (res.success) {
+        await loadData();
+        showAlert(
+          "Importação Inteligente Concluída!",
+          `A sua planilha foi enviada num único pacote (Lote) para o banco de dados com sucesso!\n\n✨ Insumos novos cadastrados: ${res.successCount}\n🔄 Insumos atualizados/amarrados: ${res.updatedCount}`,
+        );
+      } else {
+        showAlert(
+          "Erro na Importação",
+          res.error || "O servidor rejeitou o lote.",
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert(
+        "Erro na Importação",
+        "Ocorreu um erro ao processar a requisição de lote.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    loadData();
-    showAlert(
-      "Importação Finalizada",
-      `Resumo da operação:\n\n✅ Sucesso: ${successCount} itens cadastrados.\n❌ Erros: ${errorCount} itens falharam (verifique se já existiam códigos duplicados).`,
-    );
   }
 
   return (
@@ -429,7 +430,6 @@ export function ItemsAdmin() {
         />
       )}
 
-      {/* MODAL DE CADASTRO / EDIÇÃO OTIMIZADO PARA FORMULÁRIO */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
@@ -482,7 +482,7 @@ export function ItemsAdmin() {
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="item-cost">Custo Unitário</Label>
+                <Label htmlFor="item-cost">Custo Unitário (Opcional)</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                     R$
@@ -561,7 +561,7 @@ export function ItemsAdmin() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL GLOBAL DE AVISOS E CONFIRMAÇÕES */}
+      {/* MODAL GLOBAL DE AVISOS */}
       <Dialog
         open={feedback.open}
         onOpenChange={(open) => setFeedback((prev) => ({ ...prev, open }))}
