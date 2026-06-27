@@ -9,6 +9,7 @@ import {
   ClockIcon,
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
+  ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,11 @@ const navItems = [
   { href: "/requisicao", label: "Separação", icon: ClipboardDocumentCheckIcon },
   { href: "/historico", label: "Histórico", icon: ClockIcon },
   { href: "/admin", label: "Cadastros", icon: Cog6ToothIcon },
+  {
+    href: "/relatorios",
+    label: "Relatórios",
+    icon: ClipboardDocumentListIcon,
+  },
 ];
 
 interface UserData {
