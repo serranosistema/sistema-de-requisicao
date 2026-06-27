@@ -18,24 +18,25 @@ export interface FullRequisition {
 }
 
 // ============================================================================
-// EXPORTAR CSV (Estrito para Integração com ERP)
+// EXPORTAR CSV (Ajustado para Ponto e Vírgula e Sem Aspas para o ERP)
 // ============================================================================
 export const exportCSV = (reqs: FullRequisition[], title: string) => {
   let csvContent = "";
 
-  // setor fixo "17" (Almox. Central) para origem, e o código do setor da requisição para destino
   reqs.forEach((req) => {
     const codDestino = req.sector.code;
-    const codOrigem = "17";
+    const codOrigem = "17"; // Almox. Central fixo
 
     req.items.forEach((reqItem) => {
       const codInsumo = reqItem.item.code;
       const qtd = reqItem.quantity.toString().replace(".", ",");
 
-      csvContent += `"${codInsumo}","${qtd}","${codOrigem}","${codDestino}"\n`;
+      // Correção: Sem aspas e separado estritamente por ponto e vírgula (;)
+      csvContent += `${codInsumo};${qtd};${codOrigem};${codDestino}\n`;
     });
   });
 
+  // O "\uFEFF" garante que o Excel abra o arquivo reconhecendo acentos e caracteres PT-BR
   const blob = new Blob(["\uFEFF" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
