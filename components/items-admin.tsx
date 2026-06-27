@@ -317,7 +317,7 @@ export function ItemsAdmin() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-semibold">Itens cadastrados ({items.length})</h2>
         <div className="flex flex-wrap items-center gap-2">
-          {items.length > 0 && (
+          {/*  {items.length > 0 && (
             <Button
               variant="outline"
               onClick={handleDeleteAll}
@@ -326,7 +326,7 @@ export function ItemsAdmin() {
               <TrashIcon className="size-4" />
               <span className="hidden sm:inline">Excluir Todos</span>
             </Button>
-          )}
+          )} */}
 
           <Button
             variant="outline"
