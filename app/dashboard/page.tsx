@@ -70,6 +70,13 @@ function shortDate(iso: string | Date) {
   });
 }
 
+// FORMATADOR PADRÃO BRASIL
+function formatQty(num: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
 const CHART_COLORS = [
   "#3b82f6",
   "#10b981",
@@ -95,7 +102,8 @@ function CustomTooltip({ active, payload, label }: any) {
             />
             {p.name}
           </span>
-          <span className="font-bold text-foreground">{p.value}</span>
+          {/* Formatando o valor do Tooltip */}
+          <span className="font-bold text-foreground">{formatQty(p.value)}</span>
         </div>
       ))}
     </div>
@@ -182,24 +190,21 @@ export default function DashboardPage() {
   // ── OTIMIZAÇÃO: Stale-While-Revalidate (SWR) Manual ──
   useEffect(() => {
     async function fetchData() {
-      // 1. Tenta pegar os dados cacheados na sessão para carregamento instantâneo
       const cachedReqs = sessionStorage.getItem("@val-dash-reqs");
       const cachedSectors = sessionStorage.getItem("@val-dash-sectors");
 
       if (cachedReqs && cachedSectors) {
         setRequisitions(JSON.parse(cachedReqs));
         setTotalSectorsCount(JSON.parse(cachedSectors));
-        setLoading(false); // Remove o loading na hora!
+        setLoading(false);
       }
 
-      // 2. Busca no banco de dados em background para ter certeza que está atualizado
       try {
         const [fetchedReqs, fetchedSectors] = await Promise.all([
           getRequisitions(),
           getSectors(),
         ]);
 
-        // 3. Atualiza os estados e guarda a versão mais fresca no cache
         setRequisitions(fetchedReqs as DbRequisition[]);
         setTotalSectorsCount(fetchedSectors.length);
 
@@ -211,13 +216,12 @@ export default function DashboardPage() {
       } catch (error) {
         console.error("Erro ao atualizar o dashboard:", error);
       } finally {
-        setLoading(false); // Caso o cache estivesse vazio, remove o loading agora
+        setLoading(false);
       }
     }
     fetchData();
   }, []);
 
-  // ── filtro de período ──
   const cutoff = useMemo(() => daysAgo(period), [period]);
   const prevCutoff = useMemo(() => daysAgo(period * 2), [period]);
 
@@ -235,7 +239,6 @@ export default function DashboardPage() {
     [requisitions, prevCutoff, cutoff],
   );
 
-  // ── KPIs ──
   const totalReqs = reqs.length;
   const activeSectors = new Set(reqs.map((r) => r.sector.id)).size;
 
@@ -258,7 +261,6 @@ export default function DashboardPage() {
     0,
   );
 
-  // ── Comparativo ao longo do tempo (LineChart Duplo) ──
   const comparativeTimelineData = useMemo(() => {
     const data: { date: string; Atual: number; Anterior: number }[] = [];
 
@@ -291,7 +293,6 @@ export default function DashboardPage() {
     return data;
   }, [reqs, prevReqs, period]);
 
-  // ── Ranking de setores por volume (BarChart horizontal) ──
   const sectorRanking = useMemo(() => {
     const map: Record<string, { qty: number; name: string }> = {};
     reqs.forEach((r) => {
@@ -303,14 +304,12 @@ export default function DashboardPage() {
       .slice(0, 8);
   }, [reqs]);
 
-  // ── Top 6 insumos (BarChart vertical) ──
   const topItems = useMemo(() => {
     return Object.values(totalsByItem)
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 6);
   }, [totalsByItem]);
 
-  // ── Composição por setor × insumo (Stacked BarChart) ──
   const stackedData = useMemo(() => {
     const sectorMap: Record<string, { id: string; name: string; qty: number }> =
       {};
@@ -354,7 +353,6 @@ export default function DashboardPage() {
     return Object.keys(stackedData[0]).filter((k) => k !== "setor");
   }, [stackedData]);
 
-  // ── Variação semana × semana por insumo ──
   const weekComparison = useMemo(() => {
     const thisWeekCutoff = daysAgo(7);
     const prevWeekCutoff = daysAgo(14);
@@ -489,7 +487,7 @@ export default function DashboardPage() {
                   label="Insumo líder"
                   value={topItemLabel}
                   sub={
-                    topItemEntry ? `${topItemEntry.qty} unidades` : undefined
+                    topItemEntry ? `${formatQty(topItemEntry.qty)} unidades` : undefined
                   }
                   icon={FireIcon}
                   tint="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
@@ -498,7 +496,7 @@ export default function DashboardPage() {
               <div className="w-[85vw] shrink-0 snap-center sm:w-auto">
                 <KpiCard
                   label="Volume total separado"
-                  value={totalVolume}
+                  value={formatQty(totalVolume)}
                   sub="unidades no período"
                   icon={CubeTransparentIcon}
                   tint="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
@@ -553,6 +551,7 @@ export default function DashboardPage() {
                         tickLine={false}
                         axisLine={false}
                         allowDecimals={false}
+                        tickFormatter={(val) => formatQty(val)}
                       />
                       <Tooltip content={<CustomTooltip />} />
                       <Legend
@@ -618,6 +617,7 @@ export default function DashboardPage() {
                             tickLine={false}
                             axisLine={false}
                             allowDecimals={false}
+                            tickFormatter={(val) => formatQty(val)}
                           />
                           <YAxis
                             type="category"
@@ -691,6 +691,7 @@ export default function DashboardPage() {
                             tickLine={false}
                             axisLine={false}
                             allowDecimals={false}
+                            tickFormatter={(val) => formatQty(val)}
                           />
                           <Tooltip
                             content={<CustomTooltip />}
@@ -757,6 +758,7 @@ export default function DashboardPage() {
                               tickLine={false}
                               axisLine={false}
                               allowDecimals={false}
+                              tickFormatter={(val) => formatQty(val)}
                             />
                             <Tooltip
                               content={<CustomTooltip />}
@@ -828,10 +830,10 @@ export default function DashboardPage() {
                                   {row.name}
                                 </td>
                                 <td className="px-4 py-3.5 text-right text-muted-foreground tabular-nums">
-                                  {row.prev}
+                                  {formatQty(row.prev)}
                                 </td>
                                 <td className="px-4 py-3.5 text-right font-semibold text-foreground tabular-nums">
-                                  {row.cur}
+                                  {formatQty(row.cur)}
                                 </td>
                                 <td className="px-5 py-3.5 text-right">
                                   {row.delta === null ? (
