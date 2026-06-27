@@ -115,7 +115,7 @@ function KpiCard({
   value,
   sub,
   icon: Icon,
-  tint,
+  tint, // Mantemos a prop para não quebrar onde já foi chamado, mas ignoramos a cor
   large = false,
 }: {
   label: string;
@@ -126,31 +126,35 @@ function KpiCard({
   large?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5">
-      <div
-        className={cn(
-          "flex shrink-0 items-center justify-center rounded-xl",
-          tint,
-          large ? "size-14" : "size-12",
-        )}
-      >
-        <Icon className={large ? "size-7" : "size-6"} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm text-muted-foreground leading-tight">{label}</p>
-        <p
-          className={cn(
-            "mt-0.5 font-bold leading-tight text-balance",
-            large ? "text-3xl" : "text-xl",
-          )}
-        >
-          {value}
+    <div className="group relative flex h-full min-h-[120px] flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-5">
+      {/* Ícone de fundo (Marca D'água) */}
+      <Icon className="absolute -bottom-4 -right-4 size-28 text-muted-foreground/10 transition-transform duration-500 group-hover:scale-110 sm:size-32 z-0 -rotate-6" />
+
+      {/* Conteúdo do Card */}
+      <div className="relative z-10 flex h-full flex-col">
+        <p className="text-sm font-medium text-muted-foreground leading-tight">
+          {label}
         </p>
-        {sub && (
-          <p className="mt-1 text-xs text-muted-foreground text-balance">
-            {sub}
+        
+        <div className="mt-auto pt-4">
+          <p
+            className={cn(
+              "font-bold leading-tight text-foreground",
+              large ? "text-4xl" : "text-2xl",
+            )}
+          >
+            {value}
           </p>
-        )}
+          {/* Truque para manter a altura sempre igual: se não tiver 'sub', renderiza um texto invisível */}
+          <p
+            className={cn(
+              "mt-1 text-xs text-balance",
+              sub ? "text-muted-foreground" : "invisible select-none",
+            )}
+          >
+            {sub || "espaço reservado"}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -462,27 +466,27 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* ── KPIs ── */}
-            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 snap-x snap-mandatory scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              <div className="w-[85vw] shrink-0 snap-center sm:w-auto">
+{/* ── KPIs ── */}
+            <div className="flex items-stretch overflow-x-auto gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 snap-x snap-mandatory scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="w-[85vw] shrink-0 snap-center sm:w-auto h-auto">
                 <KpiCard
                   label="Requisições no período"
                   value={totalReqs}
                   icon={ClockIcon}
-                  tint="bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                  tint=""
                   large
                 />
               </div>
-              <div className="w-[85vw] shrink-0 snap-center sm:w-auto">
+              <div className="w-[85vw] shrink-0 snap-center sm:w-auto h-auto">
                 <KpiCard
                   label="Setores ativos"
                   value={activeSectors}
                   sub={`de ${totalSectorsCount} cadastrados`}
                   icon={BuildingStorefrontIcon}
-                  tint="bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300"
+                  tint=""
                 />
               </div>
-              <div className="w-[85vw] shrink-0 snap-center sm:w-auto">
+              <div className="w-[85vw] shrink-0 snap-center sm:w-auto h-auto">
                 <KpiCard
                   label="Insumo líder"
                   value={topItemLabel}
@@ -490,16 +494,16 @@ export default function DashboardPage() {
                     topItemEntry ? `${formatQty(topItemEntry.qty)} unidades` : undefined
                   }
                   icon={FireIcon}
-                  tint="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                  tint=""
                 />
               </div>
-              <div className="w-[85vw] shrink-0 snap-center sm:w-auto">
+              <div className="w-[85vw] shrink-0 snap-center sm:w-auto h-auto">
                 <KpiCard
                   label="Volume total separado"
                   value={formatQty(totalVolume)}
                   sub="unidades no período"
                   icon={CubeTransparentIcon}
-                  tint="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                  tint=""
                 />
               </div>
             </div>
