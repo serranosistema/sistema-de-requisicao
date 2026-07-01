@@ -15,6 +15,8 @@ import {
 } from "@heroicons/react/24/outline";
 import {
   LineChart,
+  Area,
+  AreaChart,
   Line,
   BarChart,
   Bar,
@@ -103,7 +105,9 @@ function CustomTooltip({ active, payload, label }: any) {
             {p.name}
           </span>
           {/* Formatando o valor do Tooltip */}
-          <span className="font-bold text-foreground">{formatQty(p.value)}</span>
+          <span className="font-bold text-foreground">
+            {formatQty(p.value)}
+          </span>
         </div>
       ))}
     </div>
@@ -135,7 +139,7 @@ function KpiCard({
         <p className="text-sm font-medium text-muted-foreground leading-tight">
           {label}
         </p>
-        
+
         <div className="mt-auto pt-4">
           <p
             className={cn(
@@ -466,7 +470,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-{/* ── KPIs ── */}
+            {/* ── KPIs ── */}
             <div className="flex items-stretch overflow-x-auto gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 snap-x snap-mandatory scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               <div className="w-[85vw] shrink-0 snap-center sm:w-auto h-auto">
                 <KpiCard
@@ -491,7 +495,9 @@ export default function DashboardPage() {
                   label="Insumo líder"
                   value={topItemLabel}
                   sub={
-                    topItemEntry ? `${formatQty(topItemEntry.qty)} unidades` : undefined
+                    topItemEntry
+                      ? `${formatQty(topItemEntry.qty)} unidades`
+                      : undefined
                   }
                   icon={FireIcon}
                   tint=""
@@ -524,17 +530,57 @@ export default function DashboardPage() {
 
             {!isEmpty && (
               <>
-                {/* ── Comparativo ao longo do tempo (NOVO GRÁFICO DUPLO) ── */}
+                {/* ── Comparativo ao longo do tempo (NOVO GRÁFICO ÁREA PRO) ── */}
                 <div className="rounded-2xl border border-border bg-card p-5">
                   <SectionHeader
                     title="Evolução de Consumo"
                     description="Comparativo de volume: Período Atual vs Período Anterior"
                   />
                   <ResponsiveContainer width="100%" height={260}>
-                    <LineChart
+                    <AreaChart
                       data={comparativeTimelineData}
                       margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                     >
+                      {/* Definição dos Gradientes para o efeito "Sombra" */}
+                      <defs>
+                        <linearGradient
+                          id="colorAtual"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#3b82f6"
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#3b82f6"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                        <linearGradient
+                          id="colorAnterior"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#94a3b8"
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#94a3b8"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke="var(--border)"
@@ -565,26 +611,34 @@ export default function DashboardPage() {
                           paddingTop: "15px",
                         }}
                       />
-                      <Line
-                        type="monotone"
-                        dataKey="Atual"
-                        stroke="#3b82f6" // blue-500
-                        strokeWidth={3}
-                        dot={period <= 15 ? { r: 4, fill: "#3b82f6" } : false}
-                        activeDot={{ r: 6 }}
-                        animationDuration={1500}
-                      />
-                      <Line
+
+                      {/* Linha Anterior (Cinza tracejada) */}
+                      <Area
                         type="monotone"
                         dataKey="Anterior"
                         stroke="#94a3b8" // slate-400
                         strokeWidth={3}
                         strokeDasharray="5 5"
+                        fillOpacity={1}
+                        fill="url(#colorAnterior)"
                         dot={false}
                         activeDot={{ r: 6 }}
                         animationDuration={1500}
                       />
-                    </LineChart>
+
+                      {/* Linha Atual (Azul sólida) */}
+                      <Area
+                        type="monotone"
+                        dataKey="Atual"
+                        stroke="#3b82f6" // blue-500
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorAtual)"
+                        dot={period <= 15 ? { r: 4, fill: "#3b82f6" } : false}
+                        activeDot={{ r: 6 }}
+                        animationDuration={1500}
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
 
