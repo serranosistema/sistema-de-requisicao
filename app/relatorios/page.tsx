@@ -204,151 +204,160 @@ export default function RelatoriosPage() {
     );
   }
 
-  // === TELA DE CONFIGURAÇÃO (BUILDER) ===
+  // === TELA DE CONFIGURAÇÃO (BUILDER) — layout chapado, sem cards ===
   return (
     <AppShell title="Gerador de Relatórios">
-      <div className="mx-auto max-w-4xl pb-24 space-y-6">
-        {/* BLOCO 1: Filtros de Dados */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-primary/10 p-3 text-primary">
-              <FunnelIcon className="size-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">Filtros de Dados</h2>
-              <p className="text-sm text-muted-foreground">
-                Escolha o período e os setores a analisar
-              </p>
-            </div>
-          </div>
+      <div className="flex h-full flex-col -m-4 md:-m-6">
+        {/* Conteúdo rolável */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-4xl px-4 py-6 md:px-6">
+            <div className="space-y-10">
+              {/* SEÇÃO 1: Filtros de Dados */}
+              <section>
+                <header className="mb-4 flex items-center gap-2">
+                  <FunnelIcon className="size-4 text-primary" />
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Filtros de Dados
+                  </h2>
+                </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex flex-col gap-2">
-              <Label>Data Inicial</Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="h-11"
-              />
-            </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Data Inicial</Label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
 
-            <div className="flex flex-col gap-2">
-              <Label>Data Final</Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="h-11"
-              />
-            </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Data Final</Label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
 
-            <div className="flex flex-col gap-2">
-              <Label>Setor</Label>
-              <Select
-                value={selectedSector}
-                onValueChange={(val) => val && setSelectedSector(val)}
-              >
-                <SelectTrigger className="h-11">
-                  {/* MÁGICA AQUI: Forçamos a exibição do nome em vez de deixar o componente tentar adivinhar */}
-                  <SelectValue>{selectedSectorName}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos os Setores</SelectItem>
-                  {sectors.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Setor</Label>
+                    <Select
+                      value={selectedSector}
+                      onValueChange={(val) => val && setSelectedSector(val)}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue>{selectedSectorName}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Todos os Setores</SelectItem>
+                        {sectors.map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </section>
+
+              {/* SEÇÃO 2: Estrutura do Documento */}
+              <section>
+                <header className="mb-1 flex items-center gap-2">
+                  <Cog6ToothIcon className="size-4 text-indigo-600 dark:text-indigo-400" />
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Estrutura do Documento
+                  </h2>
+                </header>
+                <p className="mb-2 text-sm text-muted-foreground">
+                  Ligue ou desligue as seções do relatório
+                </p>
+
+                <div className="divide-y divide-border/60">
+                  <label className="flex cursor-pointer items-center justify-between gap-4 py-4 transition-colors active:bg-muted/40 sm:-mx-3 sm:rounded-lg sm:px-3 sm:hover:bg-muted/30">
+                    <div className="min-w-0">
+                      <p className="font-semibold leading-tight">
+                        Exibir Custos Financeiros
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Mostra colunas de valor e KPI de custo
+                      </p>
+                    </div>
+                    <Checkbox
+                      checked={showCosts}
+                      onCheckedChange={(c) => setShowCosts(!!c)}
+                      className="scale-125 shrink-0"
+                    />
+                  </label>
+
+                  <label className="flex cursor-pointer items-center justify-between gap-4 py-4 transition-colors active:bg-muted/40 sm:-mx-3 sm:rounded-lg sm:px-3 sm:hover:bg-muted/30">
+                    <div className="min-w-0">
+                      <p className="font-semibold leading-tight">
+                        Painel de Gráficos
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Incluir gráficos de barras do consumo
+                      </p>
+                    </div>
+                    <Checkbox
+                      checked={showCharts}
+                      onCheckedChange={(c) => setShowCharts(!!c)}
+                      className="scale-125 shrink-0"
+                    />
+                  </label>
+
+                  <label className="flex cursor-pointer items-center justify-between gap-4 py-4 transition-colors active:bg-muted/40 sm:-mx-3 sm:rounded-lg sm:px-3 sm:hover:bg-muted/30">
+                    <div className="min-w-0">
+                      <p className="font-semibold leading-tight">
+                        Tabela de Detalhamento
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Lista os 10 itens mais consumidos
+                      </p>
+                    </div>
+                    <Checkbox
+                      checked={showTable}
+                      onCheckedChange={(c) => setShowTable(!!c)}
+                      className="scale-125 shrink-0"
+                    />
+                  </label>
+
+                  <label className="flex cursor-pointer items-center justify-between gap-4 py-4 transition-colors active:bg-muted/40 sm:-mx-3 sm:rounded-lg sm:px-3 sm:hover:bg-muted/30">
+                    <div className="min-w-0">
+                      <p className="font-semibold leading-tight">
+                        Campos de Assinatura
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Rodapé para rubrica física e aprovação
+                      </p>
+                    </div>
+                    <Checkbox
+                      checked={showSignatures}
+                      onCheckedChange={(c) => setShowSignatures(!!c)}
+                      className="scale-125 shrink-0"
+                    />
+                  </label>
+                </div>
+              </section>
             </div>
           </div>
         </div>
 
-        {/* BLOCO 2: Personalização do Visual */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-indigo-500/10 p-3 text-indigo-600 dark:text-indigo-400">
-              <Cog6ToothIcon className="size-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">Estrutura do Documento</h2>
-              <p className="text-sm text-muted-foreground">
-                Ligue ou desligue as seções do relatório
-              </p>
-            </div>
+        {/* Barra de ação fixa no rodapé — CTA estilo app nativo */}
+        <div className="border-t border-border bg-card px-4 py-3 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+          <div className="mx-auto max-w-4xl">
+            <Button
+              onClick={() => setIsPreviewMode(true)}
+              size="lg"
+              className="h-14 w-full gap-2 rounded-xl text-base font-bold"
+            >
+              <EyeIcon className="size-6" />
+              Gerar e Ver Prévia
+            </Button>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border p-4 transition-colors hover:bg-muted/50">
-              <div>
-                <p className="font-semibold">Exibir Custos Financeiros</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Mostra colunas de valor e KPI de custo
-                </p>
-              </div>
-              <Checkbox
-                checked={showCosts}
-                onCheckedChange={(c) => setShowCosts(!!c)}
-                className="scale-125"
-              />
-            </label>
-
-            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border p-4 transition-colors hover:bg-muted/50">
-              <div>
-                <p className="font-semibold">Painel de Gráficos</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Incluir gráficos de barras do consumo
-                </p>
-              </div>
-              <Checkbox
-                checked={showCharts}
-                onCheckedChange={(c) => setShowCharts(!!c)}
-                className="scale-125"
-              />
-            </label>
-
-            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border p-4 transition-colors hover:bg-muted/50">
-              <div>
-                <p className="font-semibold">Tabela de Detalhamento</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Lista os 10 itens mais consumidos
-                </p>
-              </div>
-              <Checkbox
-                checked={showTable}
-                onCheckedChange={(c) => setShowTable(!!c)}
-                className="scale-125"
-              />
-            </label>
-
-            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border p-4 transition-colors hover:bg-muted/50">
-              <div>
-                <p className="font-semibold">Campos de Assinatura</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Rodapé para rubrica física e aprovação
-                </p>
-              </div>
-              <Checkbox
-                checked={showSignatures}
-                onCheckedChange={(c) => setShowSignatures(!!c)}
-                className="scale-125"
-              />
-            </label>
-          </div>
-        </div>
-
-        {/* BLOCO 3: Botão Flutuante/Fixo de Ação */}
-        <div className="flex justify-end pt-4">
-          <Button
-            onClick={() => setIsPreviewMode(true)}
-            size="lg"
-            className="w-full sm:w-auto gap-2 font-bold h-14 rounded-xl text-base"
-          >
-            <EyeIcon className="size-6" />
-            Gerar e Ver Prévia
-          </Button>
         </div>
       </div>
     </AppShell>
