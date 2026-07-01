@@ -17,8 +17,10 @@ import {
   CurrencyDollarIcon,
 } from "@heroicons/react/24/outline";
 
+// Alterado para 0 casas decimais, já que agora medimos frequência (ocorrências inteiras)
 const formatQty = (num: number) =>
-  new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(num);
+  new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(num);
+
 const formatMoney = (num: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     num,
@@ -46,7 +48,7 @@ export function ReportDocument({
   selectedSectorName,
   showCosts,
   isAllSectors,
-  showCharts, // <-- Novas opções de customização
+  showCharts,
   showTable,
   showSignatures,
 }: any) {
@@ -73,11 +75,18 @@ export function ReportDocument({
         if (!itemMap[iId]) {
           itemMap[iId] = { name: reqItem.item.name, qty: 0, cost: 0 };
         }
-        itemMap[iId].qty += reqItem.quantity;
+
+        // LÓGICA ATUALIZADA: Conta +1 (frequência) em vez da quantidade física (KG/L/UN)
+        itemMap[iId].qty += 1;
+
+        // O custo permanece real (quantidade física vezes o valor unitário)
         itemMap[iId].cost += reqItem.quantity * (reqItem.item.cost || 0);
 
-        sectorMap[req.sector.id].qty += reqItem.quantity;
-        volume += reqItem.quantity;
+        // Frequência do setor
+        sectorMap[req.sector.id].qty += 1;
+
+        // Total de ocorrências de itens movimentados
+        volume += 1;
         cost += reqItem.quantity * (reqItem.item.cost || 0);
       });
     });
@@ -106,13 +115,12 @@ export function ReportDocument({
   }
 
   return (
-    // Removi as bordas redondas e adicionei fundo branco puro para simular papel
     <div className="bg-white p-8 sm:p-12 text-black print:p-0 print:m-0 print:w-full">
       {/* ── CABEÇALHO DO RELATÓRIO ── */}
       <div className="mb-6 border-b-2 border-gray-200 pb-4 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold uppercase tracking-wider text-gray-900">
-            Dashboard de Consumo
+            Relatório Operacional
           </h1>
           <p className="mt-1 text-gray-600 font-medium">
             Período: {formatLocalDate(startDate)} a {formatLocalDate(endDate)}
@@ -137,7 +145,7 @@ export function ReportDocument({
           <div className="flex items-center gap-2 text-gray-500 mb-2">
             <ClockIcon className="size-5" />
             <span className="text-xs font-bold uppercase tracking-wider">
-              Separações
+              Requisições
             </span>
           </div>
           <p className="text-3xl font-black text-gray-900">
@@ -149,12 +157,12 @@ export function ReportDocument({
           <div className="flex items-center gap-2 text-blue-600 mb-2">
             <CubeTransparentIcon className="size-5" />
             <span className="text-xs font-bold uppercase tracking-wider">
-              Volume Total
+              Movimentações
             </span>
           </div>
           <p className="text-3xl font-black text-blue-900">
             {formatQty(totalVolume)}{" "}
-            <span className="text-sm font-medium">un.</span>
+            <span className="text-sm font-medium">ocorrências</span>
           </p>
         </div>
 
@@ -162,7 +170,7 @@ export function ReportDocument({
           <div className="flex items-center gap-2 text-amber-600 mb-2">
             <FireIcon className="size-5" />
             <span className="text-xs font-bold uppercase tracking-wider">
-              Mais Consumido
+              Mais Solicitado
             </span>
           </div>
           <p
@@ -172,7 +180,7 @@ export function ReportDocument({
             {topItemLabel}
           </p>
           <p className="text-sm font-medium text-amber-700/80">
-            {formatQty(topItemQty)} un.
+            {formatQty(topItemQty)} solicitações
           </p>
         </div>
 
@@ -197,14 +205,14 @@ export function ReportDocument({
         )}
       </div>
 
-      {/* ── GRÁFICOS (Renderizados apenas se o usuário pedir) ── */}
+      {/* ── GRÁFICOS ── */}
       {showCharts && (
         <div
           className={`grid gap-8 mb-8 ${isAllSectors ? "grid-cols-2" : "grid-cols-1"}`}
         >
           <div className="rounded-xl border border-gray-200 p-4">
             <h3 className="text-sm font-bold text-gray-700 uppercase mb-4 text-center">
-              Insumos Mais Consumidos (Top 6)
+              Insumos Mais Solicitados (Top 6)
             </h3>
             <div className="h-55 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -251,7 +259,7 @@ export function ReportDocument({
           {isAllSectors && (
             <div className="rounded-xl border border-gray-200 p-4">
               <h3 className="text-sm font-bold text-gray-700 uppercase mb-4 text-center">
-                Consumo por Setor
+                Solicitações por Setor
               </h3>
               <div className="h-55 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -312,7 +320,7 @@ export function ReportDocument({
               <tr className="border-b-2 border-gray-300 bg-gray-50">
                 <th className="py-2 px-2 font-bold text-gray-800">Insumo</th>
                 <th className="py-2 px-2 font-bold text-gray-800 text-right">
-                  Qtd. Consumida
+                  Solicitações
                 </th>
                 {showCosts && (
                   <th className="py-2 px-2 font-bold text-gray-800 text-right">

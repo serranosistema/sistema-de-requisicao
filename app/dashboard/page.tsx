@@ -14,10 +14,8 @@ import {
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
 import {
-  LineChart,
   Area,
   AreaChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -72,10 +70,9 @@ function shortDate(iso: string | Date) {
   });
 }
 
-// FORMATADOR PADRÃO BRASIL
 function formatQty(num: number) {
   return new Intl.NumberFormat("pt-BR", {
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0, // Como agora é frequência (contagem), não precisamos de decimais
   }).format(num);
 }
 
@@ -104,7 +101,6 @@ function CustomTooltip({ active, payload, label }: any) {
             />
             {p.name}
           </span>
-          {/* Formatando o valor do Tooltip */}
           <span className="font-bold text-foreground">
             {formatQty(p.value)}
           </span>
@@ -119,7 +115,7 @@ function KpiCard({
   value,
   sub,
   icon: Icon,
-  tint, // Mantemos a prop para não quebrar onde já foi chamado, mas ignoramos a cor
+  tint,
   large = false,
 }: {
   label: string;
@@ -130,16 +126,12 @@ function KpiCard({
   large?: boolean;
 }) {
   return (
-    <div className="group relative flex h-full min-h-[120px] flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-5">
-      {/* Ícone de fundo (Marca D'água) */}
+    <div className="group relative flex h-full min-h-30 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-5">
       <Icon className="absolute -bottom-4 -right-4 size-28 text-muted-foreground/10 transition-transform duration-500 group-hover:scale-110 sm:size-32 z-0 -rotate-6" />
-
-      {/* Conteúdo do Card */}
       <div className="relative z-10 flex h-full flex-col">
         <p className="text-sm font-medium text-muted-foreground leading-tight">
           {label}
         </p>
-
         <div className="mt-auto pt-4">
           <p
             className={cn(
@@ -149,7 +141,6 @@ function KpiCard({
           >
             {value}
           </p>
-          {/* Truque para manter a altura sempre igual: se não tiver 'sub', renderiza um texto invisível */}
           <p
             className={cn(
               "mt-1 text-xs text-balance",
@@ -195,7 +186,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<number>(30);
 
-  // ── OTIMIZAÇÃO: Stale-While-Revalidate (SWR) Manual ──
   useEffect(() => {
     async function fetchData() {
       const cachedReqs = sessionStorage.getItem("@val-dash-reqs");
@@ -250,13 +240,14 @@ export default function DashboardPage() {
   const totalReqs = reqs.length;
   const activeSectors = new Set(reqs.map((r) => r.sector.id)).size;
 
+  // LÓGICA ATUALIZADA: Conta a FREQUÊNCIA (+1 por vez que o item aparece)
   const totalsByItem: Record<string, { qty: number; name: string }> = {};
   reqs.forEach((r) =>
     r.items.forEach((i) => {
       if (!totalsByItem[i.item.id]) {
         totalsByItem[i.item.id] = { qty: 0, name: i.item.name };
       }
-      totalsByItem[i.item.id].qty += i.quantity;
+      totalsByItem[i.item.id].qty += 1;
     }),
   );
 
@@ -264,10 +255,9 @@ export default function DashboardPage() {
     (a, b) => b.qty - a.qty,
   )[0];
   const topItemLabel = topItemEntry ? topItemEntry.name : "—";
-  const totalVolume = Object.values(totalsByItem).reduce(
-    (a, b) => a + b.qty,
-    0,
-  );
+
+  // LÓGICA ATUALIZADA: Total de itens pedidos, não a soma de kg/l/un
+  const totalVolume = reqs.reduce((acc, r) => acc + r.items.length, 0);
 
   const comparativeTimelineData = useMemo(() => {
     const data: { date: string; Atual: number; Anterior: number }[] = [];
@@ -276,7 +266,6 @@ export default function DashboardPage() {
       const curDate = new Date();
       curDate.setDate(curDate.getDate() - d);
       const curStr = shortDate(curDate.toISOString());
-
       data.push({ date: curStr, Atual: 0, Anterior: 0 });
     }
 
@@ -284,7 +273,7 @@ export default function DashboardPage() {
       const curStr = shortDate(r.createdAt);
       const idx = data.findIndex((d) => d.date === curStr);
       if (idx !== -1) {
-        data[idx].Atual += r.items.reduce((s, i) => s + i.quantity, 0);
+        data[idx].Atual += r.items.length; // LÓGICA ATUALIZADA: Conta os itens da requisição
       }
     });
 
@@ -294,7 +283,7 @@ export default function DashboardPage() {
       const curStr = shortDate(pDate.toISOString());
       const idx = data.findIndex((d) => d.date === curStr);
       if (idx !== -1) {
-        data[idx].Anterior += r.items.reduce((s, i) => s + i.quantity, 0);
+        data[idx].Anterior += r.items.length; // LÓGICA ATUALIZADA
       }
     });
 
@@ -305,7 +294,7 @@ export default function DashboardPage() {
     const map: Record<string, { qty: number; name: string }> = {};
     reqs.forEach((r) => {
       if (!map[r.sector.id]) map[r.sector.id] = { qty: 0, name: r.sector.name };
-      r.items.forEach((i) => (map[r.sector.id].qty += i.quantity));
+      map[r.sector.id].qty += r.items.length; // LÓGICA ATUALIZADA
     });
     return Object.values(map)
       .sort((a, b) => b.qty - a.qty)
@@ -328,7 +317,7 @@ export default function DashboardPage() {
           name: r.sector.name,
           qty: 0,
         };
-      r.items.forEach((i) => (sectorMap[r.sector.id].qty += i.quantity));
+      sectorMap[r.sector.id].qty += r.items.length; // LÓGICA ATUALIZADA
     });
 
     const topSectors = Object.values(sectorMap)
@@ -346,10 +335,10 @@ export default function DashboardPage() {
 
       topItemIds.forEach((iId) => {
         const itemName = totalsByItem[iId].name;
+        // LÓGICA ATUALIZADA: .length conta quantas vezes o insumo foi pedido
         const qty = sReqs
           .flatMap((r) => r.items)
-          .filter((i) => i.item.id === iId)
-          .reduce((s, i) => s + i.quantity, 0);
+          .filter((i) => i.item.id === iId).length;
         row[itemName] = qty || 0;
       });
       return row;
@@ -374,7 +363,7 @@ export default function DashboardPage() {
         r.items.forEach((i) => {
           if (!thisWeek[i.item.id])
             thisWeek[i.item.id] = { name: i.item.name, qty: 0 };
-          thisWeek[i.item.id].qty += i.quantity;
+          thisWeek[i.item.id].qty += 1; // LÓGICA ATUALIZADA
         }),
       );
 
@@ -388,7 +377,7 @@ export default function DashboardPage() {
         r.items.forEach((i) => {
           if (!prevWeek[i.item.id])
             prevWeek[i.item.id] = { name: i.item.name, qty: 0 };
-          prevWeek[i.item.id].qty += i.quantity;
+          prevWeek[i.item.id].qty += 1; // LÓGICA ATUALIZADA
         }),
       );
 
@@ -439,7 +428,7 @@ export default function DashboardPage() {
                   Visão Operacional
                 </h1>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  Consumo de insumos da loja
+                  Frequência de consumo na loja
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
@@ -492,11 +481,11 @@ export default function DashboardPage() {
               </div>
               <div className="w-[85vw] shrink-0 snap-center sm:w-auto h-auto">
                 <KpiCard
-                  label="Insumo líder"
+                  label="Insumo mais solicitado"
                   value={topItemLabel}
                   sub={
                     topItemEntry
-                      ? `${formatQty(topItemEntry.qty)} unidades`
+                      ? `${formatQty(topItemEntry.qty)} solicitações`
                       : undefined
                   }
                   icon={FireIcon}
@@ -505,9 +494,9 @@ export default function DashboardPage() {
               </div>
               <div className="w-[85vw] shrink-0 snap-center sm:w-auto h-auto">
                 <KpiCard
-                  label="Volume total separado"
+                  label="Itens movimentados"
                   value={formatQty(totalVolume)}
-                  sub="unidades no período"
+                  sub="ocorrências em requisições"
                   icon={CubeTransparentIcon}
                   tint=""
                 />
@@ -533,15 +522,14 @@ export default function DashboardPage() {
                 {/* ── Comparativo ao longo do tempo (NOVO GRÁFICO ÁREA PRO) ── */}
                 <div className="rounded-2xl border border-border bg-card p-5">
                   <SectionHeader
-                    title="Evolução de Consumo"
-                    description="Comparativo de volume: Período Atual vs Período Anterior"
+                    title="Evolução de Solicitações"
+                    description="Comparativo da frequência de itens solicitados: Atual vs Anterior"
                   />
                   <ResponsiveContainer width="100%" height={260}>
                     <AreaChart
                       data={comparativeTimelineData}
                       margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                     >
-                      {/* Definição dos Gradientes para o efeito "Sombra" */}
                       <defs>
                         <linearGradient
                           id="colorAtual"
@@ -611,12 +599,11 @@ export default function DashboardPage() {
                           paddingTop: "15px",
                         }}
                       />
-
-                      {/* Linha Anterior (Cinza tracejada) */}
                       <Area
                         type="monotone"
                         dataKey="Anterior"
-                        stroke="#94a3b8" // slate-400
+                        name="Solicitações Anterior"
+                        stroke="#94a3b8"
                         strokeWidth={3}
                         strokeDasharray="5 5"
                         fillOpacity={1}
@@ -625,12 +612,11 @@ export default function DashboardPage() {
                         activeDot={{ r: 6 }}
                         animationDuration={1500}
                       />
-
-                      {/* Linha Atual (Azul sólida) */}
                       <Area
                         type="monotone"
                         dataKey="Atual"
-                        stroke="#3b82f6" // blue-500
+                        name="Solicitações Atual"
+                        stroke="#3b82f6"
                         strokeWidth={3}
                         fillOpacity={1}
                         fill="url(#colorAtual)"
@@ -644,11 +630,10 @@ export default function DashboardPage() {
 
                 {/* ── Grid: ranking setores + top insumos ── */}
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  {/* Ranking de setores */}
                   <div className="rounded-2xl border border-border bg-card p-5">
                     <SectionHeader
-                      title="Setores que mais consomem"
-                      description="Volume total de unidades separadas por setor"
+                      title="Setores que mais solicitam"
+                      description="Quantidade de insumos solicitados por setor"
                     />
                     {sectorRanking.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-8">
@@ -694,7 +679,7 @@ export default function DashboardPage() {
                           />
                           <Bar
                             dataKey="qty"
-                            name="Qtd."
+                            name="Solicitações"
                             radius={[0, 6, 6, 0]}
                             maxBarSize={32}
                           >
@@ -710,11 +695,10 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  {/* Top insumos */}
                   <div className="rounded-2xl border border-border bg-card p-5">
                     <SectionHeader
-                      title="Insumos mais utilizados"
-                      description="Top 6 por quantidade total no período"
+                      title="Insumos mais solicitados"
+                      description="Top 6 por frequência de pedidos"
                     />
                     {topItems.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-8">
@@ -757,7 +741,7 @@ export default function DashboardPage() {
                           />
                           <Bar
                             dataKey="qty"
-                            name="Qtd."
+                            name="Solicitações"
                             radius={[6, 6, 0, 0]}
                             maxBarSize={48}
                           >
@@ -778,8 +762,8 @@ export default function DashboardPage() {
                 {stackedData.length > 0 && stackedKeys.length > 0 && (
                   <div className="rounded-2xl border border-border bg-card p-5">
                     <SectionHeader
-                      title="Composição de consumo por setor"
-                      description="Quais insumos cada setor utiliza — top 5 insumos × top 6 setores"
+                      title="Composição de requisições por setor"
+                      description="Frequência do Top 5 insumos nos Top 6 setores"
                     />
                     <div className="overflow-x-auto -mx-1">
                       <div className="min-w-150 px-1">
@@ -854,8 +838,8 @@ export default function DashboardPage() {
                 {weekComparison.length > 0 && (
                   <div className="rounded-2xl border border-border bg-card p-5">
                     <SectionHeader
-                      title="Variação semana a semana"
-                      description="Esta semana vs semana anterior — detecte aumentos e reduções de consumo"
+                      title="Variação de requisições semanais"
+                      description="Esta semana vs semana anterior — detecte anomalias de demanda"
                     />
                     <div className="overflow-x-auto -mx-5 mt-2">
                       <table className="w-full text-sm">
@@ -896,8 +880,7 @@ export default function DashboardPage() {
                                 <td className="px-5 py-3.5 text-right">
                                   {row.delta === null ? (
                                     <span className="inline-flex items-center gap-1 text-muted-foreground text-xs">
-                                      <MinusIcon className="size-3.5" />
-                                      novo
+                                      <MinusIcon className="size-3.5" /> novo
                                     </span>
                                   ) : (
                                     <span
@@ -933,11 +916,11 @@ export default function DashboardPage() {
                       <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
                         <ArrowUpIcon className="size-3" /> aumento
                       </span>{" "}
-                      significa mais consumo que o esperado —{" "}
+                      indica mais requisições que o normal —{" "}
                       <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                         <ArrowDownIcon className="size-3" /> redução
                       </span>{" "}
-                      pode indicar eficiência ou subprodução.
+                      pode indicar que o insumo está sendo menos demandado.
                     </p>
                   </div>
                 )}
