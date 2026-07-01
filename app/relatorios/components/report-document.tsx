@@ -206,7 +206,7 @@ export function ReportDocument({
             <h3 className="text-sm font-bold text-gray-700 uppercase mb-4 text-center">
               Insumos Mais Consumidos (Top 6)
             </h3>
-            <div className="h-[220px] w-full">
+            <div className="h-55 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={topItems.slice(0, 6)}
@@ -253,7 +253,7 @@ export function ReportDocument({
               <h3 className="text-sm font-bold text-gray-700 uppercase mb-4 text-center">
                 Consumo por Setor
               </h3>
-              <div className="h-[220px] w-full">
+              <div className="h-55 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={sectorRanking}
